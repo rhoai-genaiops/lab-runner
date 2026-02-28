@@ -1,0 +1,3 @@
+[console_scripts]
+lab-runner = lab_runner.cli:cli
+lab-runner-web = lab_runner.web:serve
