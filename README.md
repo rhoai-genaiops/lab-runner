@@ -110,7 +110,3 @@ lab_runner/
 ```
 
 Each **module** declares an ID, name, dependencies, and a list of **steps**. The runner resolves dependencies via topological sort (lower IDs first), then executes steps sequentially — skipping any that `verify()` confirms are already done.
-
-## License
-
-Internal use for Red Hat AI501 GenAIOps Enablement workshops.
