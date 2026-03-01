@@ -1,6 +1,6 @@
 image:
   repository: quay.io/rhoai-genaiops/lab-runner
-  tag: latest
+  tag: 0.0.1
   pullPolicy: IfNotPresent
 
 replicaCount: 1

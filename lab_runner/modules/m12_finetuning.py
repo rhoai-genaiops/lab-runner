@@ -3,7 +3,7 @@
 from lab_runner.config import Config
 from lab_runner.modules.base import Module
 from lab_runner.steps.base import Step
-from lab_runner.steps.verify_step import CheckResourceExistsStep
+from lab_runner.steps.verify_step import CheckRouteAccessibleStep
 
 
 class FineTuningModule(Module):
@@ -23,11 +23,11 @@ class FineTuningModule(Module):
         steps: list[Step] = []
 
         # 1. Verify model registry accessible
-        steps.append(CheckResourceExistsStep(
-            resource_type="modelregistry",
-            name="modelregistry-sample",
-            namespace="rhoai-model-registries",
-            description="Verify Model Registry CR exists",
+        registry_url = f"https://{config.username}-registry-rest.{config.cluster_domain}"
+        steps.append(CheckRouteAccessibleStep(
+            url=registry_url,
+            expected_status=401,
+            description="Verify Model Registry accessible",
         ))
 
         # Note: Fine-tuning exercises are notebook-driven (synthetic data gen,

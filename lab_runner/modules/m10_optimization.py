@@ -21,7 +21,7 @@ class OptimizationModule(Module):
 
     @property
     def dependencies(self) -> list[int]:
-        return [3]
+        return [8]
 
     def get_steps(self, config: Config) -> list[Step]:
         ns = config.namespace

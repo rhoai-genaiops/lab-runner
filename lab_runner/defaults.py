@@ -870,6 +870,20 @@ eval:
   enabled: true
 rag:
   enabled: true
+  milvus:
+    service: "milvus-test"
+guardrails:
+  enabled: true
+  hap:
+    enabled: true
+  language_detection:
+    enabled: true
+  prompt_injection:
+    enabled: true
+  regex:
+    enabled: true
+    filter:
+      - (?i).*fight club.*
 mcp:
   enabled: true
 """

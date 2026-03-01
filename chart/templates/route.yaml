@@ -1,15 +1,16 @@
 {{- if .Values.route.enabled }}
+---
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: {{ .Release.Name }}
+  name: lab-runner
   labels:
     app.kubernetes.io/name: lab-runner
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/instance: lab-runner
 spec:
   to:
     kind: Service
-    name: {{ .Release.Name }}
+    name: lab-runner
     weight: 100
   port:
     targetPort: 8080
