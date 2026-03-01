@@ -152,3 +152,67 @@ class ConfigureMinIOWebhookStep(Step):
             )
 
         return StepResult.success()
+
+
+class UploadDocumentToMinIOStep(Step):
+    """Download a PDF from the RDU website and upload it to a MinIO bucket.
+
+    Uses the MinIO S3 API directly via boto3 for reliable uploads.
+    This triggers the document ingestion pipeline if a webhook is configured
+    on the bucket for PUT events.
+    """
+
+    MINIO_PASSWORD = "thisisthepassword"
+
+    def __init__(
+        self,
+        bucket: str,
+        doc_filename: str,
+        description: str | None = None,
+    ):
+        self.bucket = bucket
+        self.doc_filename = doc_filename
+        self.description = description or f"Upload {doc_filename} to MinIO '{bucket}'"
+        self.active_description = f"Uploading {doc_filename}..."
+
+    def verify(self, config: Config) -> bool:
+        return False  # Always run
+
+    def run(self, config: Config) -> StepResult:
+        import boto3
+        from botocore.config import Config as BotoConfig
+
+        # 1. Download PDF from RDU website
+        rdu_url = f"https://rdu-website-ai501.{config.cluster_domain}/{self.doc_filename}"
+        try:
+            dl = req.get(rdu_url, verify=False, timeout=30)
+        except Exception as e:
+            return StepResult.failed(f"Failed to download {self.doc_filename}: {e}")
+        if dl.status_code != 200:
+            return StepResult.failed(
+                f"Failed to download {self.doc_filename}: HTTP {dl.status_code}"
+            )
+        pdf_content = dl.content
+
+        # 2. Upload to MinIO via S3 API
+        s3_url = f"https://minio-api-{config.toolings_namespace}.{config.cluster_domain}"
+        try:
+            s3 = boto3.client(
+                "s3",
+                endpoint_url=s3_url,
+                aws_access_key_id=config.username,
+                aws_secret_access_key=self.MINIO_PASSWORD,
+                region_name="us-east-1",
+                config=BotoConfig(signature_version="s3v4"),
+                verify=False,
+            )
+            s3.put_object(
+                Bucket=self.bucket,
+                Key=self.doc_filename,
+                Body=pdf_content,
+                ContentType="application/pdf",
+            )
+        except Exception as e:
+            return StepResult.failed(f"S3 upload failed: {e}")
+
+        return StepResult.success(output=f"Uploaded {self.doc_filename}")

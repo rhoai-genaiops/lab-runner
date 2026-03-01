@@ -7,7 +7,7 @@ from lab_runner.steps.base import Step
 from lab_runner.steps.helm_step import HelmUpgradeStep
 from lab_runner.steps.kube_step import WaitForArgoCDAppsStep, WaitForReadyStep
 from lab_runner.steps.git_step import CloneAndModifyStep
-from lab_runner.steps.webhook_step import ConfigureMinIOWebhookStep
+from lab_runner.steps.webhook_step import ConfigureMinIOWebhookStep, UploadDocumentToMinIOStep
 from lab_runner.steps.verify_step import CheckPodRunningStep
 
 
@@ -155,7 +155,14 @@ class RAGModule(Module):
             description="Configure MinIO webhook: documents → doc ingestion pipeline",
         ))
 
-        # 12. Verify: Milvus, pods healthy
+        # 12. Upload a document to MinIO to trigger ingestion pipeline
+        steps.append(UploadDocumentToMinIOStep(
+            bucket="documents",
+            doc_filename="biotechnology-syllabus-240-ects.pdf",
+            description="Upload PDF to MinIO documents bucket",
+        ))
+
+        # 13. Verify: Milvus, pods healthy
         steps.append(CheckPodRunningStep(
             label="app.kubernetes.io/name=milvus",
             namespace=test_ns,
