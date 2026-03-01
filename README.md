@@ -13,13 +13,13 @@ Lab Runner automates the hands-on steps from each workshop module: Helm installs
 | 2 | Linguistics | — | Canopy UI + route verification |
 | 3 | Ready to Scale 101 | 2 | LlamaStack, Playground, Workbench, Backend, GitOps pipeline, ArgoCD ApplicationSets |
 | 4 | Ready to Scale 201 | 3 | Evals, MinIO, DSPA, Tekton pipeline, webhooks |
-| 5 | Grounded AI (RAG) | 4 | Milvus, RAG config, doc ingestion pipeline, MinIO webhook |
+| 5 | Grounded AI (RAG) | 4 | Milvus, RAG config, doc ingestion pipeline, MinIO webhook, PDF upload |
 | 6 | Observability | 3 | Grafana dashboard via ArgoCD |
 | 7 | Guardrails | 3 | Guardrails Orchestrator, safety shields |
 | 8 | Agents | 5, 7 | MCP Calendar, student-assistant agent, evals |
-| 9 | On-Prem Practicum | 3 | TinyLlama CPU inference, ServingRuntime |
-| 10 | Model Optimization | 3 | FP8 quantized model integration |
-| 12 | Fine-Tuning | 3 | Infrastructure verification (notebook-driven) |
+| 9 | On-Prem Practicum | 8 | TinyLlama CPU inference, ServingRuntime |
+| 10 | Model Optimization | 8 | FP8 quantized model integration |
+| 12 | Fine-Tuning | 3 | Model Registry verification (notebook-driven) |
 
 ## Quick Start
 
