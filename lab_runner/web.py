@@ -78,7 +78,11 @@ async def run_modules(req: RunRequest):
         loop.run_in_executor(None, _produce)
 
         while True:
-            event = await queue.get()
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=15)
+            except asyncio.TimeoutError:
+                yield ": keepalive\n\n"
+                continue
             if event is sentinel:
                 break
             yield f"data: {json.dumps(event)}\n\n"
