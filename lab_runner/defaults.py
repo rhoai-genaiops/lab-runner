@@ -455,21 +455,31 @@ cluster_domain: {cluster_domain}
 
 # Eval test files for information-search
 def evals_information_search_test_yaml() -> str:
-    return """---
-description: "Information Search - RAG Evaluation"
-providers:
-  - id: "llama-stack"
-    config:
-      llamaStackUrl: "{{LLAMA_STACK_URL}}"
-prompts:
-  - "What is the main topic of the document?"
-  - "Summarize the key points."
+    return """\
+name: information_search_tests
+description: Tests for the information-search prompts of the Llama 3.2 3B model.
+model: llama32
+endpoint: /information-search
+scoring_params:
+    "llm-as-judge::base":
+        "judge_model": llama32
+        "prompt_template": judge_prompt.txt
+        "type": "llm_as_judge"
+        "judge_score_regexes": ["Answer: (A|B|C|D|E)"]
+    "basic::subset_of": null
 tests:
-  - vars:
-      question: "What is the main topic?"
-    assert:
-      - type: "contains"
-        value: "topic"
+  - prompt: "Describe the main learning outcomes for students completing the Advanced Generative AI Systems course."
+    expected_result: "Students will learn to design GenAI applications, engineer prompts with evaluation, build production systems with CI/CD, implement RAG pipelines, secure LLM apps with guardrails, integrate multi-modal models, optimize models via quantization, instrument monitoring systems, orchestrate agents with tool-calling, and operate MaaS with APIs and governance."
+  - prompt: "What are the key modules covered in weeks 5-8 of the AI501 curriculum?"
+    expected_result: "Week 5 covers RAG Foundations (embeddings, chunking, ingestion pipelines), Week 6 covers Guardrails (safety taxonomies, filters, jailbreak defense), Week 7 covers Observability (tracing, metrics, logs, SLI/SLO), and Week 8 covers Tool-Calling & Agents (function calling, MCP, planner/critic loops)."
+  - prompt: "What assessment components make up the AI501 course evaluation and what are their weightings?"
+    expected_result: "Assessment includes Prompting & Eval Harness (10%), RAG Mini-System (15%), Guardrails & Red-Team (10%), Observability Pack (10%), Optimization Lab (10%), Agent with Tools (10%), Capstone (30%), and Participation (5%)."
+  - prompt: "Explain what RAG implementation involves according to the course syllabus."
+    expected_result: "RAG implementation involves building pipelines for ingestion, indexing, and retrieval with citations and provenance. Students learn embeddings, chunking strategies, ingestion pipelines, and create ETL→vector DB→retrieval→generation systems with citations."
+  - prompt: "What technologies and platforms are used in the AI501 course infrastructure?"
+    expected_result: "The course uses AI/ML platforms like Llama Stack abdHugging Face; development tools including Python, PyTorch, LangChain, Docker, and Kubernetes; infrastructure with GPU clusters and vector databases like Pinecone and Weaviate; plus security and monitoring tools for guardrails and observability."
+  - prompt: "What are the four practical implementation tracks available in AI501?"
+    expected_result: "The four tracks are: Production AI Systems (Llama Stack, GitOps, CI/CD), Knowledge Grounding (RAG design, vector DBs, doc pipelines), AI Safety & Security (Guardrails, red-teaming, observability), and Advanced Applications (Agents/tool-calling, multi-modal, model optimization)."
 """
 
 

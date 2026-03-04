@@ -17,10 +17,12 @@ class CheckRouteAccessibleStep(Step):
         self,
         url: str,
         expected_status: int = 200,
+        retries: int = 6,
         description: str | None = None,
     ):
         self.url = url
         self.expected_status = expected_status
+        self.retries = retries
         self.description = description or f"Verify route accessible: {url}"
         self.active_description = f"Checking {url}..."
 
@@ -31,7 +33,7 @@ class CheckRouteAccessibleStep(Step):
         import time
 
         last_status = None
-        for attempt in range(6):
+        for attempt in range(self.retries):
             try:
                 r = requests.get(self.url, timeout=15, verify=False, allow_redirects=True)
                 if r.status_code == self.expected_status:
@@ -39,8 +41,8 @@ class CheckRouteAccessibleStep(Step):
                 last_status = r.status_code
             except Exception as e:
                 last_status = str(e)
-            if attempt < 5:
-                time.sleep(5)
+            if attempt < self.retries - 1:
+                time.sleep(10)
         return StepResult.failed(
             f"Route {self.url} not accessible after retries (last: {last_status}, expected {self.expected_status})"
         )

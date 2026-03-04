@@ -23,12 +23,14 @@ class HelmInstallStep(Step):
         chart: str,
         namespace: str,
         values: dict | None = None,
+        create_namespace: bool = False,
         description: str | None = None,
     ):
         self.release_name = release_name
         self.chart = chart
         self.namespace = namespace
         self.values = values
+        self.create_namespace = create_namespace
         self.description = description or f"Install Helm release '{release_name}'"
         self.active_description = f"Installing {release_name}..."
 
@@ -42,6 +44,7 @@ class HelmInstallStep(Step):
                 self.chart,
                 self.namespace,
                 values=self.values,
+                create_namespace=self.create_namespace,
             )
             return StepResult.success(output=output)
         except Exception as e:
@@ -77,7 +80,8 @@ class HelmUpgradeStep(Step):
         if self.verify_key is not None:
             current = helm.get_values(self.release_name, self.namespace)
             return _nested_get(current, self.verify_key) == self.verify_value
-        return True
+        # No verify_key means always run the upgrade (idempotent)
+        return False
 
     def run(self, config: Config) -> StepResult:
         try:

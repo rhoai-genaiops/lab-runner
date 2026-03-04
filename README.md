@@ -19,6 +19,7 @@ Lab Runner automates the hands-on steps from each workshop module: Helm installs
 | 8 | Agents | 5, 7 | MCP Calendar, student-assistant agent, evals |
 | 9 | On-Prem Practicum | 8 | TinyLlama CPU inference, ServingRuntime |
 | 10 | Model Optimization | 8 | FP8 quantized model integration |
+| 11 | MaaS | 9, 10 | LiteMaaS deployment (project creation, Helm install) |
 | 12 | Fine-Tuning | 3 | Model Registry verification (notebook-driven) |
 
 ## Quick Start

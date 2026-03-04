@@ -75,6 +75,10 @@ class Config:
         return "opendatahub.io/workbenches=true"
 
     @property
+    def maas_namespace(self) -> str:
+        return f"{self.username}-maas"
+
+    @property
     def minio_endpoint(self) -> str:
         return f"http://minio.{self.namespace}.svc.cluster.local:9000"
 

@@ -7,6 +7,7 @@ from lab_runner.modules.m07_guardrails import GuardrailsModule
 from lab_runner.modules.m08_agents import AgentsModule
 from lab_runner.modules.m09_onprem import OnPremModule
 from lab_runner.modules.m10_optimization import OptimizationModule
+from lab_runner.modules.m11_maas import MaaSModule
 from lab_runner.modules.m12_finetuning import FineTuningModule
 
 MODULE_REGISTRY: dict[int, type] = {
@@ -19,5 +20,6 @@ MODULE_REGISTRY: dict[int, type] = {
     8: AgentsModule,
     9: OnPremModule,
     10: OptimizationModule,
+    11: MaaSModule,
     12: FineTuningModule,
 }

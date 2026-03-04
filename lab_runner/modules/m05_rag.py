@@ -111,12 +111,12 @@ class RAGModule(Module):
         steps.append(CloneAndModifyStep(
             repo_url=config.evals_repo_url,
             modifications={
-                "information-search/summary_tests.yaml": defaults.evals_information_search_test_yaml(),
+                "information-search/information_search_tests.yaml": defaults.evals_information_search_test_yaml(),
                 "information-search/judge_prompt.txt": defaults.evals_information_search_judge_prompt(),
             },
             commit_message="Add information-search evaluation tests",
             verify_repo="evals",
-            verify_file="information-search/summary_tests.yaml",
+            verify_file="information-search/information_search_tests.yaml",
             description="Add information-search eval test files",
         ))
 
