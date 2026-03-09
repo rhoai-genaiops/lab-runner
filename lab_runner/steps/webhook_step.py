@@ -6,8 +6,14 @@ import requests as req
 import urllib3
 
 from lab_runner.clients.gitea import GiteaClient
+from lab_runner.clients import openshift as oc
 from lab_runner.config import Config
 from lab_runner.steps.base import Step, StepResult
+
+
+def _get_minio_password(namespace: str) -> str | None:
+    """Read MinIO root password from the minio-secret in the given namespace."""
+    return oc.get_secret_value("minio-secret", "minio_root_password", namespace)
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -58,8 +64,6 @@ class ConfigureMinIOWebhookStep(Step):
       4. Subscribe the bucket to PUT events on the webhook ARN
     """
 
-    MINIO_PASSWORD = "thisisthepassword"
-
     def __init__(
         self,
         bucket: str,
@@ -80,16 +84,19 @@ class ConfigureMinIOWebhookStep(Step):
     def _console_url(self, config: Config) -> str:
         return f"https://minio-ui-{config.toolings_namespace}.{config.cluster_domain}"
 
-    def _login(self, console_url: str, username: str) -> req.Session | None:
+    def _login(self, console_url: str, username: str, password: str) -> tuple[req.Session | None, str]:
         session = req.Session()
-        resp = session.post(
-            f"{console_url}/api/v1/login",
-            json={"accessKey": username, "secretKey": self.MINIO_PASSWORD},
-            verify=False,
-        )
+        try:
+            resp = session.post(
+                f"{console_url}/api/v1/login",
+                json={"accessKey": username, "secretKey": password},
+                verify=False,
+            )
+        except Exception as e:
+            return None, f"Connection error: {e}"
         if resp.status_code not in (200, 204):
-            return None
-        return session
+            return None, f"HTTP {resp.status_code}: {resp.text[:200]}"
+        return session, ""
 
     def verify(self, config: Config) -> bool:
         return False  # Always run — cheap and idempotent
@@ -97,10 +104,14 @@ class ConfigureMinIOWebhookStep(Step):
     def run(self, config: Config) -> StepResult:
         console = self._console_url(config)
 
+        minio_password = _get_minio_password(config.toolings_namespace)
+        if not minio_password:
+            return StepResult.failed("Could not read MinIO password from minio-secret")
+
         # 1. Login
-        session = self._login(console, config.username)
+        session, login_err = self._login(console, config.username, minio_password)
         if not session:
-            return StepResult.failed("MinIO Console login failed")
+            return StepResult.failed(f"MinIO Console login failed: {login_err}")
 
         # 2. Add webhook event destination
         resp = session.put(
@@ -124,13 +135,14 @@ class ConfigureMinIOWebhookStep(Step):
 
         # 4. Re-login after restart (retry a few times while MinIO restarts)
         session = None
+        login_err = ""
         for _ in range(6):
-            session = self._login(console, config.username)
+            session, login_err = self._login(console, config.username, minio_password)
             if session:
                 break
             time.sleep(5)
         if not session:
-            return StepResult.failed("MinIO Console login failed after restart")
+            return StepResult.failed(f"MinIO Console login failed after restart: {login_err}")
 
         # 5. Subscribe bucket to events
         resp = session.post(
@@ -162,8 +174,6 @@ class UploadDocumentToMinIOStep(Step):
     on the bucket for PUT events.
     """
 
-    MINIO_PASSWORD = "thisisthepassword"
-
     def __init__(
         self,
         bucket: str,
@@ -181,6 +191,10 @@ class UploadDocumentToMinIOStep(Step):
     def run(self, config: Config) -> StepResult:
         import boto3
         from botocore.config import Config as BotoConfig
+
+        minio_password = _get_minio_password(config.toolings_namespace)
+        if not minio_password:
+            return StepResult.failed("Could not read MinIO password from minio-secret")
 
         # 1. Download PDF from RDU website
         rdu_url = f"https://rdu-website-ai501.{config.cluster_domain}/{self.doc_filename}"
@@ -201,7 +215,7 @@ class UploadDocumentToMinIOStep(Step):
                 "s3",
                 endpoint_url=s3_url,
                 aws_access_key_id=config.username,
-                aws_secret_access_key=self.MINIO_PASSWORD,
+                aws_secret_access_key=minio_password,
                 region_name="us-east-1",
                 config=BotoConfig(signature_version="s3v4"),
                 verify=False,

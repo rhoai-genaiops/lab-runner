@@ -115,8 +115,8 @@ class Scale101Module(Module):
             namespace=ns,
             values=ui_values,
             verify_key="image.tag",
-            verify_value="0.5",
-            description="Upgrade Canopy UI (add backend, image 0.5)",
+            verify_value="0.6",
+            description="Upgrade Canopy UI (add backend, image 0.6)",
         ))
 
         # 10. Wait for UI redeployed

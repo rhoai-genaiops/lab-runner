@@ -62,7 +62,7 @@ CANOPY_UI_UPGRADE_VALUES_M03 = {
     "MODEL_NAME": MODEL_NAME,
     "LLM_ENDPOINT": "",  # set dynamically
     "BACKEND_ENDPOINT": "http://canopy-backend:8000",
-    "image": {"name": "canopy-ui", "tag": "0.5"},
+    "image": {"name": "canopy-ui", "tag": "0.6"},
 }
 
 MINIO_VALUES = {
@@ -297,7 +297,7 @@ chart_path: chart
 BACKEND_ENDPOINT: "http://canopy-backend:8000"
 image:
   name: "canopy-ui"
-  tag: "0.5"
+  tag: "0.6"
 """
 
 
@@ -308,7 +308,7 @@ chart_path: chart
 BACKEND_ENDPOINT: "http://canopy-backend:8000"
 image:
   name: "canopy-ui"
-  tag: "0.5"
+  tag: "0.6"
 """
 
 

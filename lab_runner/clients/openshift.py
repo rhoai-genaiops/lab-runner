@@ -69,6 +69,18 @@ def resource_exists(resource: str, name: str, namespace: str | None = None) -> b
     return get_json(resource, name, namespace) is not None
 
 
+def get_secret_value(name: str, key: str, namespace: str | None = None) -> str | None:
+    """Read a decoded value from a Kubernetes secret."""
+    import base64
+    data = get_json("secret", name, namespace)
+    if data is None:
+        return None
+    encoded = data.get("data", {}).get(key)
+    if encoded is None:
+        return None
+    return base64.b64decode(encoded).decode("utf-8")
+
+
 def wait_for_ready(
     resource: str,
     name: str,

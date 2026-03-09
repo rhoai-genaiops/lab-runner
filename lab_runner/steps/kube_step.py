@@ -136,7 +136,7 @@ class CreateNotebookCRStep(Step):
             f"                  --ServerApp.base_url=/notebook/{ns}/{ns}\n"
             f"                  --ServerApp.quit_button=False"
         )
-        image = "image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/ai501-custom-code-server:0.5"
+        image = "image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/ai501-custom-code-server:0.6"
 
         manifest = yaml.dump({
             "apiVersion": "kubeflow.org/v1",
@@ -154,7 +154,7 @@ class CreateNotebookCRStep(Step):
                     "opendatahub.io/image-display-name": "AI501 - Custom Code Server",
                     "openshift.io/display-name": ns,
                     "openshift.io/description": "",
-                    "notebooks.opendatahub.io/last-image-selection": "ai501-custom-code-server:0.5",
+                    "notebooks.opendatahub.io/last-image-selection": "ai501-custom-code-server:0.6",
                     "opendatahub.io/hardware-profile-namespace": "redhat-ods-applications",
                     "opendatahub.io/username": username,
                     "opendatahub.io/hardware-profile-name": "default-profile",

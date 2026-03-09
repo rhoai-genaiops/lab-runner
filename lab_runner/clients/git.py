@@ -74,6 +74,8 @@ class GitOps:
         self._repo.index.commit(message)
         origin = self._repo.remote("origin")
         env = {"GIT_SSL_NO_VERIFY": "true"}
+        # Pull latest changes before pushing (automated commits may exist)
+        origin.pull(rebase=True, env=env)
         push_info = origin.push(env=env)
         return str(push_info)
 
