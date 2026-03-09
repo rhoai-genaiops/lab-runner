@@ -98,11 +98,12 @@ class AgentsModule(Module):
         steps.append(CloneAndModifyStep(
             repo_url=config.evals_repo_url,
             modifications={
-                "student-assistant/summary_tests.yaml": defaults.evals_student_assistant_test_yaml(),
+                "student-assistant/student_assistant_tests.yaml": defaults.evals_student_assistant_test_yaml(),
+                "student-assistant/e2e_judge_prompt.txt": defaults.evals_student_assistant_e2e_judge_prompt(),
             },
             commit_message="Add student-assistant evaluation tests",
             verify_repo="evals",
-            verify_file="student-assistant/summary_tests.yaml",
+            verify_file="student-assistant/student_assistant_tests.yaml",
             description="Add student-assistant eval test files",
         ))
 

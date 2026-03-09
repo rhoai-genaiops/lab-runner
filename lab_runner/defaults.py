@@ -692,22 +692,42 @@ student-assistant:
 """
 
 
+def evals_student_assistant_e2e_judge_prompt() -> str:
+    return """You are evaluating the quality of a student assistant agent response that may use tools such as a knowledge base or professor directory.
+
+Given the following prompt, expected result, and actual response, score the response on a scale from A to E:
+- A: The response is accurate, complete, and closely matches the expected result.
+- B: The response is mostly accurate with minor omissions or differences.
+- C: The response is partially correct but missing key information.
+- D: The response is mostly incorrect or irrelevant.
+- E: The response is completely wrong or empty.
+
+Prompt: {{prompt}}
+Expected Result: {{expected_result}}
+Actual Response: {{response}}
+
+Answer:"""
+
+
 def evals_student_assistant_test_yaml() -> str:
-    return """---
-description: "Student Assistant - Agent Evaluation"
-providers:
-  - id: "llama-stack"
-    config:
-      llamaStackUrl: "{{LLAMA_STACK_URL}}"
-prompts:
-  - "What events do I have today?"
-  - "Schedule a meeting for tomorrow at 2pm."
+    return """name: student_assistant_tests
+description: End-to-end tests for the student assistant agent with tool choice validation
+model: llama32
+endpoint: /student-assistant
+scoring_params:
+    "llm-as-judge::base":
+        "judge_model": llama32
+        "prompt_template": e2e_judge_prompt.txt
+        "type": "llm_as_judge"
+        "judge_score_regexes": ["Answer: (A|B|C|D|E)"]
+    "basic::tool_choice": null
 tests:
-  - vars:
-      question: "What events do I have today?"
-    assert:
-      - type: "contains"
-        value: "calendar"
+  - prompt: "What is a forest canopy?"
+    expected_result: "A forest canopy is the upper layer of a forest, formed by the crowns of trees. It's an important ecosystem component that provides habitat for many species and plays a crucial role in photosynthesis and the forest's overall health."
+    expected_tools: ["search_knowledge_base"]
+  - prompt: "Who can help me with machine learning?"
+    expected_result: "Dr. Sarah Chen from the Computer Science department can help you with machine learning. She specializes in Machine Learning, Neural Networks, AI Ethics, and Agentic Workflows. You can reach her at s.chen@university.edu."
+    expected_tools: ["find_professors_by_expertise"]
 """
 
 
