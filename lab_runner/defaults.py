@@ -21,14 +21,14 @@ CHART_DOC_INGESTION = "charts/canopy-doc-ingestion-pipeline"
 # ── Module 2: Linguistics ──────────────────────────────────────────────
 
 SYSTEM_PROMPT = "Summarize the following text clearly and concisely."
+MLFLOW_PROMPT_NAME = "summarization"
 MODEL_NAME = "llama32"
 
 CANOPY_UI_VALUES = {
-    "SYSTEM_PROMPT": SYSTEM_PROMPT,
+    "MLFLOW_PROMPT_NAME": MLFLOW_PROMPT_NAME,
     "MODEL_NAME": MODEL_NAME,
     "LLM_ENDPOINT": "",  # set dynamically
-    "BACKEND_ENDPOINT": "",
-    "image": {"name": "canopy-ui", "tag": "simple-0.2"},
+    "image": {"name": "canopy-ui", "tag": "simple-0.5"},
 }
 
 # ── Module 3: Scale 101 ───────────────────────────────────────────────
@@ -49,20 +49,21 @@ LLAMA_STACK_PLAYGROUND_VALUES = {
 }
 
 CANOPY_BACKEND_VALUES = {
-    "LLAMA_STACK_URL": "http://llama-stack-service:8321",
-    "summarize": {
+    "summarization": {
         "enabled": True,
-        "model": "vllm-llama32/llama32",
-        "prompt": SYSTEM_PROMPT,
+        "model": "llama32",
+        "endpoint": "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1",
+        "mlflow_prompt": MLFLOW_PROMPT_NAME,
+        "mlflow_prompt_version": "latest",
     },
 }
 
 CANOPY_UI_UPGRADE_VALUES_M03 = {
-    "SYSTEM_PROMPT": SYSTEM_PROMPT,
+    "MLFLOW_PROMPT_NAME": MLFLOW_PROMPT_NAME,
     "MODEL_NAME": MODEL_NAME,
     "LLM_ENDPOINT": "",  # set dynamically
     "BACKEND_ENDPOINT": "http://canopy-backend:8000",
-    "image": {"name": "canopy-ui", "tag": "0.6"},
+    "image": {"name": "canopy-ui", "tag": "0.11"},
 }
 
 MINIO_VALUES = {
@@ -266,27 +267,23 @@ buckets:
 
 def backend_values_test_yaml() -> str:
     return f"""\
-LLAMA_STACK_URL: "http://llama-stack-service:8321"
-summarize:
+summarization:
   enabled: true
-  model: vllm-llama32/llama32
-  temperature: 0.9
-  max_tokens: 4096
-  prompt: |
-    {SYSTEM_PROMPT}
+  model: llama32
+  endpoint: "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"
+  mlflow_prompt: {MLFLOW_PROMPT_NAME}
+  mlflow_prompt_version: latest
 """
 
 
 def backend_values_prod_yaml() -> str:
     return f"""\
-LLAMA_STACK_URL: "http://llama-stack-service:8321"
-summarize:
+summarization:
   enabled: true
-  model: vllm-llama32/llama32
-  temperature: 0.9
-  max_tokens: 4096
-  prompt: |
-    {SYSTEM_PROMPT}
+  model: llama32
+  endpoint: "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"
+  mlflow_prompt: {MLFLOW_PROMPT_NAME}
+  mlflow_prompt_version: prod
 """
 
 
@@ -297,7 +294,7 @@ chart_path: chart
 BACKEND_ENDPOINT: "http://canopy-backend:8000"
 image:
   name: "canopy-ui"
-  tag: "0.6"
+  tag: "0.10"
 """
 
 
@@ -308,7 +305,7 @@ chart_path: chart
 BACKEND_ENDPOINT: "http://canopy-backend:8000"
 image:
   name: "canopy-ui"
-  tag: "0.6"
+  tag: "0.10"
 """
 
 
@@ -316,7 +313,12 @@ def gitops_test_backend_config_yaml(username: str, cluster_domain: str) -> str:
     return f"""\
 repo_url: https://gitea-gitea.{cluster_domain}/{username}/backend
 chart_path: chart
-values_file: values-test.yaml
+summarization:
+  enabled: true
+  model: llama32
+  endpoint: "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"
+  mlflow_prompt: {MLFLOW_PROMPT_NAME}
+  mlflow_prompt_version: latest
 """
 
 
@@ -324,25 +326,56 @@ def gitops_prod_backend_config_yaml(username: str, cluster_domain: str) -> str:
     return f"""\
 repo_url: https://gitea-gitea.{cluster_domain}/{username}/backend
 chart_path: chart
-values_file: values-prod.yaml
+summarization:
+  enabled: true
+  model: llama32
+  endpoint: "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"
+  mlflow_prompt: {MLFLOW_PROMPT_NAME}
+  mlflow_prompt_version: prod
 """
 
 
-def gitops_test_llama_stack_config_yaml() -> str:
-    return """\
-chart_path: charts/llama-stack-operator-instance
-models:
-  - name: "llama32"
-    url: "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"
+def gitops_test_backend_rag_config_yaml(username: str, cluster_domain: str) -> str:
+    """Backend config for test env with RAG (information-search) enabled."""
+    return f"""\
+repo_url: https://gitea-gitea.{cluster_domain}/{username}/backend
+chart_path: chart
+summarization:
+  enabled: true
+  model: llama32
+  endpoint: "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"
+  mlflow_prompt: {MLFLOW_PROMPT_NAME}
+  mlflow_prompt_version: latest
+information-search:
+  enabled: true
+  endpoint: "http://llama-stack-service:8321/v1"
+  model: vllm-llama32/llama32
+  vector_db_id: latest
+  mlflow_prompt: information-search
+  mlflow_prompt_version: latest
 """
 
 
-def gitops_prod_llama_stack_config_yaml() -> str:
-    return """\
-chart_path: charts/llama-stack-operator-instance
-models:
-  - name: "llama32"
-    url: "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"
+def gitops_test_backend_feedback_config_yaml(username: str, cluster_domain: str) -> str:
+    """Backend config for test env with feedback collection enabled."""
+    return f"""\
+repo_url: https://gitea-gitea.{cluster_domain}/{username}/backend
+chart_path: chart
+summarization:
+  enabled: true
+  model: llama32
+  endpoint: "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"
+  mlflow_prompt: {MLFLOW_PROMPT_NAME}
+  mlflow_prompt_version: latest
+information-search:
+  enabled: true
+  endpoint: "http://llama-stack-service:8321/v1"
+  model: vllm-llama32/llama32
+  vector_db_id: latest
+  mlflow_prompt: information-search
+  mlflow_prompt_version: latest
+feedback:
+  enabled: true
 """
 
 
@@ -364,28 +397,19 @@ chart_path: charts/dspa
 def evals_pipeline_config_yaml(username: str, cluster_domain: str) -> str:
     return f"""---
 chart_path: charts/canopy-evals-pipeline
-CLUSTER_DOMAIN: {cluster_domain}
 USER_NAME: {username}
+CLUSTER_DOMAIN: {cluster_domain}
 kfp:
-  llsUrl: "http://llama-stack-service.{username}-test.svc.cluster.local:8321"
   backendUrl: "http://canopy-backend.{username}-test.svc.cluster.local:8000"
-  endpointPath: "/summarize"
-secrets:
-  s3:
-    name: "test-results"
-testing:
-  enableUnitTests: false
-  llamaStackUrl: "http://llama-stack-service.{username}-test.svc.cluster.local:8321"
-  vectorDbId: "latest"
-  mcpCalendarUrl: "http://canopy-mcp-calendar-mcp-server.{username}-test.svc.cluster.local:8080/sse"
+  llmEndpoint: "http://llama-32-predictor.ai501.svc.cluster.local:8080"
 """
 
 
-def gitops_test_llama_stack_eval_config_yaml() -> str:
-    return """---
-chart_path: charts/llama-stack-operator-instance
-eval:
-  enabled: true
+def prompt_promotion_pipeline_config_yaml(username: str, cluster_domain: str) -> str:
+    return f"""---
+chart_path: charts/prompt-promotion-pipeline
+USER_NAME: {username}
+CLUSTER_DOMAIN: {cluster_domain}
 """
 
 
@@ -403,16 +427,17 @@ chart_path: charts/milvus
 """
 
 
-def gitops_llama_stack_rag_config_yaml(env: str) -> str:
+def gitops_ogx_config_yaml(env: str) -> str:
     service = f"milvus-{env}"
     return f"""---
 chart_path: charts/llama-stack-operator-instance
+models:
+  - name: "llama32"
+    url: "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"
 rag:
   enabled: true
   milvus:
     service: "{service}"
-eval:
-  enabled: true
 """
 
 
@@ -458,39 +483,66 @@ def evals_information_search_test_yaml() -> str:
     return """\
 name: information_search_tests
 description: Tests for the information-search prompts of the Llama 3.2 3B model.
-model: llama32
+usecase: information-search
 endpoint: /information-search
-scoring_params:
-    "llm-as-judge::base":
-        "judge_model": llama32
-        "prompt_template": judge_prompt.txt
-        "type": "llm_as_judge"
-        "judge_score_regexes": ["Answer: (A|B|C|D|E)"]
-    "basic::subset_of": null
+scorers:
+  - answer_quality
+  - retrieval_relevance
+  - retrieval_groundedness
+judge_prompt: judge_prompt.txt
 tests:
-  - prompt: "Describe the main learning outcomes for students completing the Advanced Generative AI Systems course."
-    expected_result: "Students will learn to design GenAI applications, engineer prompts with evaluation, build production systems with CI/CD, implement RAG pipelines, secure LLM apps with guardrails, integrate multi-modal models, optimize models via quantization, instrument monitoring systems, orchestrate agents with tool-calling, and operate MaaS with APIs and governance."
-  - prompt: "What are the key modules covered in weeks 5-8 of the AI501 curriculum?"
-    expected_result: "Week 5 covers RAG Foundations (embeddings, chunking, ingestion pipelines), Week 6 covers Guardrails (safety taxonomies, filters, jailbreak defense), Week 7 covers Observability (tracing, metrics, logs, SLI/SLO), and Week 8 covers Tool-Calling & Agents (function calling, MCP, planner/critic loops)."
-  - prompt: "What assessment components make up the AI501 course evaluation and what are their weightings?"
-    expected_result: "Assessment includes Prompting & Eval Harness (10%), RAG Mini-System (15%), Guardrails & Red-Team (10%), Observability Pack (10%), Optimization Lab (10%), Agent with Tools (10%), Capstone (30%), and Participation (5%)."
-  - prompt: "Explain what RAG implementation involves according to the course syllabus."
-    expected_result: "RAG implementation involves building pipelines for ingestion, indexing, and retrieval with citations and provenance. Students learn embeddings, chunking strategies, ingestion pipelines, and create ETL→vector DB→retrieval→generation systems with citations."
-  - prompt: "What technologies and platforms are used in the AI501 course infrastructure?"
-    expected_result: "The course uses AI/ML platforms like Llama Stack abdHugging Face; development tools including Python, PyTorch, LangChain, Docker, and Kubernetes; infrastructure with GPU clusters and vector databases like Pinecone and Weaviate; plus security and monitoring tools for guardrails and observability."
-  - prompt: "What are the four practical implementation tracks available in AI501?"
-    expected_result: "The four tracks are: Production AI Systems (Llama Stack, GitOps, CI/CD), Knowledge Grounding (RAG design, vector DBs, doc pipelines), AI Safety & Security (Guardrails, red-teaming, observability), and Advanced Applications (Agents/tool-calling, multi-modal, model optimization)."
+  - inputs:
+      prompt: "Describe the main learning outcomes for students completing the Advanced Generative AI Systems course."
+    expectations:
+      expected_result: "Students will learn to design GenAI applications, engineer prompts with evaluation, build production systems with CI/CD, implement RAG pipelines, secure LLM apps with guardrails, integrate multi-modal models, optimize models via quantization, instrument monitoring systems, orchestrate agents with tool-calling, and operate MaaS with APIs and governance."
+  - inputs:
+      prompt: "What are the key modules covered in weeks 5-8 of the AI501 curriculum?"
+    expectations:
+      expected_result: "Week 5 covers RAG Foundations (embeddings, chunking, ingestion pipelines), Week 6 covers Guardrails (safety taxonomies, filters, jailbreak defense), Week 7 covers Observability (tracing, metrics, logs, SLI/SLO), and Week 8 covers Tool-Calling & Agents (function calling, MCP, planner/critic loops)."
+  - inputs:
+      prompt: "What assessment components make up the AI501 course evaluation and what are their weightings?"
+    expectations:
+      expected_result: "Assessment includes Prompting & Eval Harness (10%), RAG Mini-System (15%), Guardrails & Red-Team (10%), Observability Pack (10%), Optimization Lab (10%), Agent with Tools (10%), Capstone (30%), and Participation (5%)."
+  - inputs:
+      prompt: "Explain what RAG implementation involves according to the course syllabus."
+    expectations:
+      expected_result: "RAG implementation involves building pipelines for ingestion, indexing, and retrieval with citations and provenance. Students learn embeddings, chunking strategies, ingestion pipelines, and create ETL→vector DB→retrieval→generation systems with citations."
+  - inputs:
+      prompt: "What technologies and platforms are used in the AI501 course infrastructure?"
+    expectations:
+      expected_result: "The course uses AI/ML platforms like Llama Stack and Hugging Face; development tools including Python, PyTorch, LangChain, Docker, and Kubernetes; infrastructure with GPU clusters and vector databases like Pinecone and Weaviate; plus security and monitoring tools for guardrails and observability."
+  - inputs:
+      prompt: "What are the four practical implementation tracks available in AI501?"
+    expectations:
+      expected_result: "The four tracks are: Production AI Systems (Llama Stack, GitOps, CI/CD), Knowledge Grounding (RAG design, vector DBs, doc pipelines), AI Safety & Security (Guardrails, red-teaming, observability), and Advanced Applications (Agents/tool-calling, multi-modal, model optimization)."
 """
 
 
 def evals_information_search_judge_prompt() -> str:
-    return """You are evaluating the quality of a RAG-based information search response.
-Score the response from 1 to 5 based on relevance and accuracy.
+    return """\
+You are an expert evaluator judging the quality of a generated answer to a question.
 
-Question: {{question}}
-Response: {{response}}
+Your task is to decide whether the GENERATED_ANSWER correctly and faithfully answers the QUESTION, compared against the EXPECTED_ANSWER.
 
-Score:"""
+A high-quality answer must satisfy ALL of the following criteria:
+- It correctly addresses the QUESTION
+- Its key facts and claims are consistent with the EXPECTED_ANSWER
+- It does not contradict or misrepresent information present in the EXPECTED_ANSWER
+- It is coherent and directly useful as a standalone answer
+
+INPUT:
+{{ inputs }}
+
+GENERATED_ANSWER:
+{{ outputs }}
+
+EXPECTED_ANSWER:
+{{ expectations }}
+
+Answer "yes" if the GENERATED_ANSWER meets all of the criteria above.
+Answer "no" if it gives incorrect information, contradicts the expected answer, or fails to address the question.
+
+Respond with only "yes" or "no"."""
 
 
 # ── Module 6: Observability ───────────────────────────────────────────
@@ -522,62 +574,82 @@ LLAMA_STACK_GUARDRAILS_VALUES = {
     },
 }
 
-def guardrails_config_yaml() -> str:
+def nemo_guardrails_config_yaml() -> str:
     return """---
-chart_path: charts/guardrails-orchestrator
-orchestrator_gateway:
-  enabled: true
+chart_path: charts/nemo-guardrails-orchestrator
 """
 
 
-def gitops_llama_stack_guardrails_config_yaml(env: str) -> str:
+def gitops_ogx_guardrails_config_yaml(env: str) -> str:
     service = f"milvus-{env}"
     return f"""---
 chart_path: charts/llama-stack-operator-instance
-eval:
+models:
+  - name: "llama32"
+    url: "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"
+rag:
   enabled: true
+  milvus:
+    service: "{service}"
 guardrails:
   enabled: true
-  regex:
-    enabled: true
-    filter:
-      - "(?i).*fight club.*"
-  hap:
-    enabled: true
-  prompt_injection:
-    enabled: true
-  language_detection:
-    enabled: true
 """
 
 
-def backend_values_test_shields_yaml() -> str:
+def gitops_test_backend_guardrails_config_yaml(username: str, cluster_domain: str) -> str:
+    """Backend config for test env with NeMo guardrails (shields) enabled."""
     return f"""\
-LLAMA_STACK_URL: "http://llama-stack-service:8321"
-summarize:
+repo_url: https://gitea-gitea.{cluster_domain}/{username}/backend
+chart_path: chart
+summarization:
   enabled: true
+  endpoint: "http://llama-stack-service:8321/v1"
+  mlflow_prompt: {MLFLOW_PROMPT_NAME}
+  mlflow_prompt_version: latest
   model: vllm-llama32/llama32
-  temperature: 0.9
-  max_tokens: 4096
-  prompt: |
-    {SYSTEM_PROMPT}
 information-search:
   enabled: true
-  vector_db_id: latest
+  endpoint: "http://llama-stack-service:8321/v1"
   model: vllm-llama32/llama32
-  prompt: |
-    You are a helpful assistant specializing in document intelligence and academic content analysis.
+  vector_db_id: latest
+  mlflow_prompt: information-search
+  mlflow_prompt_version: latest
+feedback:
+  enabled: true
 shields:
   enabled: true
-  input_shields:
-    - hap
-    - language_detection
-    - prompt_injection
-  output_shields: []
+  endpoint: http://canopy-guardrails/v1
+  model: llama32
+  config: canopy-guardrails
 """
 
 
 # ── Module 8: Agents ──────────────────────────────────────────────────
+
+STUDENT_ASSISTANT_PROMPT = """\
+You are a helpful assistant that helps students with their calendar and studies.
+
+Your workflow:
+
+1. If student asks about their schedule ("What lectures do I have?"):
+  - Call get_upcoming_events
+  - Show them the results
+  - DONE (don't modify anything)
+
+2. If student asks a question about a topic ("I need help understanding X"):
+  - First: call search_knowledge_base with the topic
+  - If knowledge base has relevant information: answer their question with that information, DONE
+  - If knowledge base has NO relevant information:
+    a) Call find_professors_by_expertise to find an expert
+    b) Call get_events_by_date to check for scheduling conflicts
+    c) Call create_event to schedule a meeting with the professor at a free time
+    d) Tell the student you scheduled the meeting
+
+When scheduling with create_event:
+- Pick a reasonable time that's free (check with get_events_by_date first)
+- Use these parameters: name, category, level, start_time, end_time, content
+- Do NOT include sid, status, or creation_time
+"""
 
 MCP_CALENDAR_VALUES = {
     "calendarApi": {"enabled": True},
@@ -600,30 +672,19 @@ LLAMA_STACK_MCP_VALUES = {
 }
 
 
-def gitops_test_llama_stack_mcp_config_yaml() -> str:
-    return """---
+def gitops_ogx_mcp_config_yaml(env: str) -> str:
+    service = f"milvus-{env}"
+    return f"""---
 chart_path: charts/llama-stack-operator-instance
 models:
   - name: "llama32"
     url: "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"
-eval:
-  enabled: true
 rag:
   enabled: true
   milvus:
-    service: "milvus-test"
+    service: "{service}"
 guardrails:
   enabled: true
-  hap:
-    enabled: true
-  language_detection:
-    enabled: true
-  prompt_injection:
-    enabled: true
-  regex:
-    enabled: true
-    filter:
-      - (?i).*fight club.*
 mcp:
   enabled: true
 """
@@ -637,117 +698,106 @@ fullnameOverride: canopy-mcp-calendar
 """
 
 
-def backend_values_test_agents_yaml() -> str:
+def gitops_test_backend_agents_config_yaml(username: str, cluster_domain: str) -> str:
+    """Backend config for test env with student-assistant (agents) enabled."""
     return f"""\
-LLAMA_STACK_URL: "http://llama-stack-service:8321"
-summarize:
+repo_url: https://gitea-gitea.{cluster_domain}/{username}/backend
+chart_path: chart
+summarization:
   enabled: true
+  endpoint: "http://llama-stack-service:8321/v1"
+  mlflow_prompt: {MLFLOW_PROMPT_NAME}
+  mlflow_prompt_version: latest
   model: vllm-llama32/llama32
-  temperature: 0.9
-  max_tokens: 4096
-  prompt: |
-    {SYSTEM_PROMPT}
 information-search:
   enabled: true
-  vector_db_id: latest
+  endpoint: "http://llama-stack-service:8321/v1"
   model: vllm-llama32/llama32
-  prompt: |-
-    You are a helpful assistant specializing in document intelligence and academic content analysis.
+  vector_db_id: latest
+  mlflow_prompt: information-search
+  mlflow_prompt_version: latest
+feedback:
+  enabled: true
 shields:
   enabled: true
-  input_shields:
-    - hap
-    - language_detection
-    - prompt_injection
-  output_shields: []
+  endpoint: http://canopy-guardrails/v1
+  model: llama32
+  config: canopy-guardrails
 student-assistant:
   enabled: true
   model: vllm-llama32/llama32
   temperature: 0.1
   vector_db_id: latest
   mcp_calendar_url: "http://canopy-mcp-calendar-mcp-server:8080/sse"
-  prompt: |
-    You are a helpful assistant that helps students with their calendar and studies.
-
-    Your workflow:
-
-    1. If student asks about their schedule ("What lectures do I have?"):
-      - Call get_upcoming_events
-      - Show them the results
-      - DONE (don't modify anything)
-
-    2. If student asks a question about a topic ("I need help understanding X"):
-      - First: call search_knowledge_base with the topic
-      - If knowledge base has relevant information: answer their question with that information, DONE
-      - If knowledge base has NO relevant information:
-        a) Call find_professors_by_expertise to find an expert
-        b) Call get_events_by_date to check for scheduling conflicts
-        c) Call create_event to schedule a meeting with the professor at a free time
-        d) Tell the student you scheduled the meeting
-
-    When scheduling with create_event:
-    - Pick a reasonable time that's free (check with get_events_by_date first)
-    - Use these parameters: name, category, level, start_time, end_time, content
-    - Do NOT include sid, status, or creation_time
+  mlflow_prompt: student-assistant
+  mlflow_prompt_version: latest
 """
 
 
-def evals_student_assistant_e2e_judge_prompt() -> str:
-    return """You are evaluating the quality of a student assistant agent response that may use tools such as a knowledge base or professor directory.
+def evals_student_assistant_judge_prompt() -> str:
+    return """\
+You are an expert evaluator judging the quality of a generated answer to a question.
 
-Given the following prompt, expected result, and actual response, score the response on a scale from A to E:
-- A: The response is accurate, complete, and closely matches the expected result.
-- B: The response is mostly accurate with minor omissions or differences.
-- C: The response is partially correct but missing key information.
-- D: The response is mostly incorrect or irrelevant.
-- E: The response is completely wrong or empty.
+Your task is to decide whether the GENERATED_ANSWER correctly and faithfully answers the QUESTION, compared against the EXPECTED_ANSWER.
 
-Prompt: {{prompt}}
-Expected Result: {{expected_result}}
-Actual Response: {{response}}
+A high-quality answer must satisfy ALL of the following criteria:
+- It correctly addresses the QUESTION
+- Its key facts and claims are consistent with the EXPECTED_ANSWER
+- It does not contradict or misrepresent information present in the EXPECTED_ANSWER
+- It is coherent and directly useful as a standalone answer
 
-Answer:"""
+INPUT:
+{{ inputs }}
+
+GENERATED_ANSWER:
+{{ outputs }}
+
+EXPECTED_ANSWER:
+{{ expectations }}
+
+Answer "yes" if the GENERATED_ANSWER meets all of the criteria above.
+Answer "no" if it gives incorrect information, contradicts the expected answer, or fails to address the question.
+
+Respond with only "yes" or "no"."""
 
 
 def evals_student_assistant_test_yaml() -> str:
-    return """name: student_assistant_tests
+    return """\
+name: student_assistant_tests
 description: End-to-end tests for the student assistant agent with tool choice validation
-model: llama32
+usecase: student-assistant
 endpoint: /student-assistant
-scoring_params:
-    "llm-as-judge::base":
-        "judge_model": llama32
-        "prompt_template": e2e_judge_prompt.txt
-        "type": "llm_as_judge"
-        "judge_score_regexes": ["Answer: (A|B|C|D|E)"]
-    "basic::tool_choice": null
+scorers:
+  - answer_quality
+  - tool_call_correctness
+  - tool_call_efficiency
+judge_prompt: judge_prompt.txt
 tests:
-  - prompt: "What is a forest canopy?"
-    expected_result: "A forest canopy is the upper layer of a forest, formed by the crowns of trees. It's an important ecosystem component that provides habitat for many species and plays a crucial role in photosynthesis and the forest's overall health."
-    expected_tools: ["search_knowledge_base"]
-  - prompt: "Who can help me with machine learning?"
-    expected_result: "Dr. Sarah Chen from the Computer Science department can help you with machine learning. She specializes in Machine Learning, Neural Networks, AI Ethics, and Agentic Workflows. You can reach her at s.chen@university.edu."
-    expected_tools: ["find_professors_by_expertise"]
+  - inputs:
+      prompt: "What is a forest canopy?"
+    expectations:
+      expected_result: "A forest canopy is the upper layer of a forest, formed by the crowns of trees. It's an important ecosystem component that provides habitat for many species and plays a crucial role in photosynthesis and the forest's overall health."
+      expected_tools:
+        - search_knowledge_base
+  - inputs:
+      prompt: "Who can help me with machine learning?"
+    expectations:
+      expected_result: "Dr. Sarah Chen from the Computer Science department can help you with machine learning. She specializes in Machine Learning, Neural Networks, AI Ethics, and Agentic Workflows. You can reach her at s.chen@university.edu."
+      expected_tools:
+        - find_professors_by_expertise
 """
 
 
 def evals_pipeline_unit_tests_config_yaml(username: str, cluster_domain: str) -> str:
     return f"""---
 chart_path: charts/canopy-evals-pipeline
-CLUSTER_DOMAIN: {cluster_domain}
 USER_NAME: {username}
+CLUSTER_DOMAIN: {cluster_domain}
 kfp:
-  llsUrl: "http://llama-stack-service.{username}-test.svc.cluster.local:8321"
   backendUrl: "http://canopy-backend.{username}-test.svc.cluster.local:8000"
-  endpointPath: "/summarize"
-secrets:
-  s3:
-    name: "test-results"
+  llmEndpoint: "http://llama-32-predictor.ai501.svc.cluster.local:8080"
 testing:
   enableUnitTests: true
-  llamaStackUrl: "http://llama-stack-service.{username}-test.svc.cluster.local:8321"
-  vectorDbId: "latest"
-  mcpCalendarUrl: "http://canopy-mcp-calendar-mcp-server.{username}-test.svc.cluster.local:8080/sse"
 """
 
 
@@ -888,7 +938,8 @@ LLAMA_STACK_FP8_VALUES = {
 }
 
 
-def gitops_test_llama_stack_fp8_config_yaml() -> str:
+def gitops_ogx_fp8_config_yaml() -> str:
+    """OGX config with both llama32 and llama32-fp8 models."""
     return """---
 chart_path: charts/llama-stack-operator-instance
 models:
@@ -896,58 +947,48 @@ models:
     url: "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"
   - name: "llama32-fp8"
     url: "http://llama-32-fp8-predictor.ai501.svc.cluster.local:8080/v1"
-eval:
-  enabled: true
 rag:
   enabled: true
   milvus:
     service: "milvus-test"
 guardrails:
   enabled: true
-  hap:
-    enabled: true
-  language_detection:
-    enabled: true
-  prompt_injection:
-    enabled: true
-  regex:
-    enabled: true
-    filter:
-      - (?i).*fight club.*
 mcp:
   enabled: true
 """
 
 
-def backend_values_test_fp8_yaml() -> str:
+def gitops_test_backend_fp8_config_yaml(username: str, cluster_domain: str) -> str:
+    """Backend config for test env switched to llama32-fp8."""
     return f"""\
-LLAMA_STACK_URL: "http://llama-stack-service:8321"
-summarize:
+repo_url: https://gitea-gitea.{cluster_domain}/{username}/backend
+chart_path: chart
+summarization:
   enabled: true
+  endpoint: "http://llama-stack-service:8321/v1"
+  mlflow_prompt: {MLFLOW_PROMPT_NAME}
+  mlflow_prompt_version: latest
   model: vllm-llama32-fp8/llama32-fp8
-  temperature: 0.9
-  max_tokens: 4096
-  prompt: |
-    {SYSTEM_PROMPT}
 information-search:
   enabled: true
-  vector_db_id: latest
+  endpoint: "http://llama-stack-service:8321/v1"
   model: vllm-llama32-fp8/llama32-fp8
-  prompt: |
-    You are a helpful assistant specializing in document intelligence and academic content analysis.
+  vector_db_id: latest
+  mlflow_prompt: information-search
+  mlflow_prompt_version: latest
+feedback:
+  enabled: true
 shields:
   enabled: true
-  input_shields:
-    - hap
-    - language_detection
-    - prompt_injection
-  output_shields: []
+  endpoint: http://canopy-guardrails/v1
+  model: llama32
+  config: canopy-guardrails
 student-assistant:
   enabled: true
   model: vllm-llama32-fp8/llama32-fp8
   temperature: 0.1
   vector_db_id: latest
   mcp_calendar_url: "http://canopy-mcp-calendar-mcp-server:8080/sse"
-  prompt: |
-    You are a helpful assistant that helps students with their calendar and studies.
+  mlflow_prompt: student-assistant
+  mlflow_prompt_version: latest
 """

@@ -1,11 +1,12 @@
 """Module 2: Linguistics - First deployment of Canopy UI."""
 
 from lab_runner.config import Config
-from lab_runner.defaults import CANOPY_UI_VALUES, CHART_CANOPY_UI
+from lab_runner.defaults import CANOPY_UI_VALUES, CHART_CANOPY_UI, MLFLOW_PROMPT_NAME, SYSTEM_PROMPT
 from lab_runner.modules.base import Module
 from lab_runner.steps.base import Step
 from lab_runner.steps.helm_step import HelmInstallStep
 from lab_runner.steps.kube_step import OcLoginStep, WaitForReadyStep
+from lab_runner.steps.mlflow_step import CreateMLflowPromptStep
 from lab_runner.steps.verify_step import CheckRouteAccessibleStep
 
 
@@ -31,6 +32,13 @@ class LinguisticsModule(Module):
 
         return [
             OcLoginStep(),
+            CreateMLflowPromptStep(
+                name=MLFLOW_PROMPT_NAME,
+                template=SYSTEM_PROMPT,
+                namespace=ns,
+                commit_message="Initial summarization prompt",
+                description=f"Register '{MLFLOW_PROMPT_NAME}' prompt in {ns} MLflow",
+            ),
             HelmInstallStep(
                 release_name="canopy-ui",
                 chart=CHART_CANOPY_UI,

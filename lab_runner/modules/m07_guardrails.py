@@ -1,11 +1,10 @@
-"""Module 7: Guardrails (Honor Code) - Safety filters and detectors."""
+"""Module 7: Guardrails (Honor Code) - NeMo guardrails via GitOps."""
 
 from lab_runner.config import Config
 from lab_runner import defaults
 from lab_runner.modules.base import Module
 from lab_runner.steps.base import Step
-from lab_runner.steps.helm_step import HelmInstallStep, HelmUpgradeStep
-from lab_runner.steps.kube_step import WaitForReadyStep
+from lab_runner.steps.kube_step import WaitForArgoCDAppsStep
 from lab_runner.steps.git_step import CloneAndModifyStep
 from lab_runner.steps.verify_step import CheckPodRunningStep
 
@@ -21,86 +20,45 @@ class GuardrailsModule(Module):
 
     @property
     def dependencies(self) -> list[int]:
-        return [3]
+        return [6]
 
     def get_steps(self, config: Config) -> list[Step]:
-        ns = config.namespace
+        toolings_ns = config.toolings_namespace
+        test_ns = config.test_namespace
 
         steps: list[Step] = []
 
-        # 1. Install guardrails-orchestrator
-        steps.append(HelmInstallStep(
-            release_name="guardrails-orchestrator",
-            chart=defaults.CHART_GUARDRAILS,
-            namespace=ns,
-            values=defaults.GUARDRAILS_VALUES,
-            description="Install Guardrails Orchestrator",
+        # 1. Add NeMo Guardrails orchestrator configs for test and prod
+        steps.append(CloneAndModifyStep(
+            repo_url=config.gitops_repo_url,
+            modifications={
+                "canopy/test/nemo-guardrails-orchestrator/config.yaml": defaults.nemo_guardrails_config_yaml(),
+                "canopy/prod/nemo-guardrails-orchestrator/config.yaml": defaults.nemo_guardrails_config_yaml(),
+                "canopy/test/ogx/config.yaml": defaults.gitops_ogx_guardrails_config_yaml("test"),
+                "canopy/prod/ogx/config.yaml": defaults.gitops_ogx_guardrails_config_yaml("prod"),
+                "canopy/test/backend/config.yaml": defaults.gitops_test_backend_guardrails_config_yaml(
+                    config.username, config.cluster_domain
+                ),
+            },
+            commit_message="NeMo Guardrails added",
+            verify_repo="genaiops-gitops",
+            verify_file="canopy/test/nemo-guardrails-orchestrator/config.yaml",
+            description="Add NeMo guardrails and enable shields in test/prod",
         ))
 
-        # 2. Upgrade llama-stack (enable guardrails + detectors)
-        steps.append(HelmUpgradeStep(
-            release_name="llama-stack-operator-instance",
-            chart=defaults.CHART_LLAMA_STACK,
-            namespace=ns,
-            values=defaults.LLAMA_STACK_GUARDRAILS_VALUES,
-            verify_key="guardrails.enabled",
-            verify_value=True,
-            description="Upgrade LlamaStack (enable guardrails)",
-        ))
-
-        # 3. Wait for guardrails pods
-        steps.append(WaitForReadyStep(
-            label="app.kubernetes.io/name=guardrails-orchestrator",
-            namespace=ns,
+        # 2. Wait for NeMo guardrails ArgoCD apps
+        steps.append(WaitForArgoCDAppsStep(
+            app_names=["nemo-guardrails-orchestrator-test", "nemo-guardrails-orchestrator-prod"],
+            namespace=toolings_ns,
             timeout=600,
-            description="Wait for Guardrails Orchestrator ready",
+            description="Wait for NeMo Guardrails deployed in test and prod",
         ))
 
-        # 4. Add guardrails config for test/prod
-        steps.append(CloneAndModifyStep(
-            repo_url=config.gitops_repo_url,
-            modifications={
-                "canopy/test/guardrails-orchestrator/config.yaml": defaults.guardrails_config_yaml(),
-                "canopy/prod/guardrails-orchestrator/config.yaml": defaults.guardrails_config_yaml(),
-            },
-            commit_message="Add guardrails orchestrator configs for test/prod",
-            verify_repo="genaiops-gitops",
-            verify_file="canopy/test/guardrails-orchestrator/config.yaml",
-            description="Add guardrails configs for test and prod",
-        ))
-
-        # 5. Update test/prod llama-stack configs (enable guardrails)
-        steps.append(CloneAndModifyStep(
-            repo_url=config.gitops_repo_url,
-            modifications={
-                "canopy/test/llama-stack/config.yaml": defaults.gitops_llama_stack_guardrails_config_yaml("test"),
-                "canopy/prod/llama-stack/config.yaml": defaults.gitops_llama_stack_guardrails_config_yaml("prod"),
-            },
-            commit_message="Enable guardrails in test/prod llama-stack configs",
-            verify_repo="genaiops-gitops",
-            verify_file="canopy/test/llama-stack/config.yaml",
-            verify_content="guardrails",
-            description="Enable guardrails in test/prod llama-stack configs",
-        ))
-
-        # 6. Enable shields in backend
-        steps.append(CloneAndModifyStep(
-            repo_url=config.backend_repo_url,
-            modifications={
-                "chart/values-test.yaml": defaults.backend_values_test_shields_yaml(),
-            },
-            commit_message="Enable shields in backend test values",
-            verify_repo="backend",
-            verify_file="chart/values-test.yaml",
-            verify_content="shields",
-            description="Enable shields in backend test values",
-        ))
-
-        # 7. Verify guardrails running
+        # 3. Verify guardrails running in test
         steps.append(CheckPodRunningStep(
-            label="app.kubernetes.io/name=guardrails-orchestrator",
-            namespace=ns,
-            description="Verify Guardrails Orchestrator running",
+            label="app.kubernetes.io/name=nemo-guardrails-orchestrator",
+            namespace=test_ns,
+            description="Verify NeMo Guardrails Orchestrator running in test",
         ))
 
         return steps

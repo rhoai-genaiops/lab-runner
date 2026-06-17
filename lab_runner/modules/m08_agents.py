@@ -1,12 +1,12 @@
-"""Module 8: Agents - MCP calendar, tool use, agent endpoint."""
+"""Module 8: Agents - MCP calendar, OGX MCP, student-assistant via GitOps."""
 
 from lab_runner.config import Config
 from lab_runner import defaults
 from lab_runner.modules.base import Module
 from lab_runner.steps.base import Step
-from lab_runner.steps.helm_step import HelmInstallStep, HelmUpgradeStep
-from lab_runner.steps.kube_step import WaitForArgoCDAppsStep, WaitForReadyStep
+from lab_runner.steps.kube_step import WaitForArgoCDAppsStep
 from lab_runner.steps.git_step import CloneAndModifyStep
+from lab_runner.steps.mlflow_step import CreateMLflowPromptStep
 from lab_runner.steps.verify_step import CheckPodRunningStep
 
 
@@ -21,93 +21,49 @@ class AgentsModule(Module):
 
     @property
     def dependencies(self) -> list[int]:
-        return [5, 7]
+        return [7]
 
     def get_steps(self, config: Config) -> list[Step]:
-        ns = config.namespace
         toolings_ns = config.toolings_namespace
+        test_ns = config.test_namespace
 
         steps: list[Step] = []
 
-        # 1. Install MCP calendar
-        steps.append(HelmInstallStep(
-            release_name="canopy-mcp-calendar",
-            chart=defaults.CHART_MCP_CALENDAR,
-            namespace=ns,
-            values=defaults.MCP_CALENDAR_VALUES,
-            description="Install MCP Calendar",
+        # 1. Register student-assistant prompt in toolings MLflow
+        steps.append(CreateMLflowPromptStep(
+            name="student-assistant",
+            template=defaults.STUDENT_ASSISTANT_PROMPT,
+            namespace=config.toolings_namespace,
+            commit_message="Initial student-assistant prompt",
+            description="Register 'student-assistant' prompt in toolings MLflow",
         ))
 
-        # 2. Wait for calendar pods
-        steps.append(WaitForReadyStep(
-            label="app.kubernetes.io/instance=canopy-mcp-calendar",
-            namespace=ns,
-            description="Wait for MCP Calendar pods ready",
-        ))
-
-        # 3. Upgrade llama-stack (enable MCP)
-        steps.append(HelmUpgradeStep(
-            release_name="llama-stack-operator-instance",
-            chart=defaults.CHART_LLAMA_STACK,
-            namespace=ns,
-            values=defaults.LLAMA_STACK_MCP_VALUES,
-            verify_key="mcp.enabled",
-            verify_value=True,
-            description="Upgrade LlamaStack (enable MCP)",
-        ))
-
-        # 4. Update test llama-stack config (enable MCP)
+        # 3. Enable MCP in OGX + add calendar-mcp + enable student-assistant in backend
         steps.append(CloneAndModifyStep(
             repo_url=config.gitops_repo_url,
             modifications={
-                "canopy/test/llama-stack/config.yaml": defaults.gitops_test_llama_stack_mcp_config_yaml(),
-            },
-            commit_message="Enable MCP in test llama-stack config",
-            verify_repo="genaiops-gitops",
-            verify_file="canopy/test/llama-stack/config.yaml",
-            verify_content="mcp",
-            description="Enable MCP in test llama-stack config",
-        ))
-
-        # 5. Add calendar-mcp config for test
-        steps.append(CloneAndModifyStep(
-            repo_url=config.gitops_repo_url,
-            modifications={
+                "canopy/test/ogx/config.yaml": defaults.gitops_ogx_mcp_config_yaml("test"),
                 "canopy/test/calendar-mcp/config.yaml": defaults.calendar_mcp_config_yaml(),
+                "canopy/test/backend/config.yaml": defaults.gitops_test_backend_agents_config_yaml(
+                    config.username, config.cluster_domain
+                ),
             },
-            commit_message="Add calendar MCP config for test",
+            commit_message="Agent feature and Calendar MCP added",
             verify_repo="genaiops-gitops",
-            verify_file="canopy/test/calendar-mcp/config.yaml",
-            description="Add calendar MCP config for test environment",
+            verify_file="canopy/test/ogx/config.yaml",
+            verify_content="mcp",
+            description="Enable MCP in OGX and add calendar-mcp + student-assistant",
         ))
 
-        # 6. Enable student-assistant in backend
-        steps.append(CloneAndModifyStep(
-            repo_url=config.backend_repo_url,
-            modifications={
-                "chart/values-test.yaml": defaults.backend_values_test_agents_yaml(),
-            },
-            commit_message="Enable student-assistant feature in backend",
-            verify_repo="backend",
-            verify_file="chart/values-test.yaml",
-            verify_content="student-assistant",
-            description="Enable student-assistant in backend test values",
+        # 4. Wait for calendar-mcp and backend ArgoCD apps to sync
+        steps.append(WaitForArgoCDAppsStep(
+            app_names=["calendar-mcp-test", "backend-test"],
+            namespace=toolings_ns,
+            timeout=300,
+            description="Wait for calendar-mcp and backend deployed",
         ))
 
-        # 7. Create evals/student-assistant test files
-        steps.append(CloneAndModifyStep(
-            repo_url=config.evals_repo_url,
-            modifications={
-                "student-assistant/student_assistant_tests.yaml": defaults.evals_student_assistant_test_yaml(),
-                "student-assistant/e2e_judge_prompt.txt": defaults.evals_student_assistant_e2e_judge_prompt(),
-            },
-            commit_message="Add student-assistant evaluation tests",
-            verify_repo="evals",
-            verify_file="student-assistant/student_assistant_tests.yaml",
-            description="Add student-assistant eval test files",
-        ))
-
-        # 8. Enable unit tests in evaluation-pipeline config
+        # 5. Enable unit tests in evaluation pipeline config
         steps.append(CloneAndModifyStep(
             repo_url=config.gitops_repo_url,
             modifications={
@@ -115,26 +71,31 @@ class AgentsModule(Module):
                     config.username, config.cluster_domain
                 ),
             },
-            commit_message="Enable unit tests in evaluation pipeline",
+            commit_message="Enabled unit tests",
             verify_repo="genaiops-gitops",
             verify_file="toolings/evaluation-pipeline/config.yaml",
-            verify_content="enableUnitTests: true",
+            verify_content="enableUnitTests",
             description="Enable unit tests in evaluation pipeline config",
         ))
 
-        # 9. Wait for ArgoCD apps synced
-        steps.append(WaitForArgoCDAppsStep(
-            app_names=["calendar-mcp-test"],
-            namespace=toolings_ns,
-            timeout=300,
-            description="Wait for ArgoCD apps synced",
+        # 6. Add student-assistant E2E eval test files
+        steps.append(CloneAndModifyStep(
+            repo_url=config.evals_repo_url,
+            modifications={
+                "student-assistant/student_assistant_tests.yaml": defaults.evals_student_assistant_test_yaml(),
+                "student-assistant/judge_prompt.txt": defaults.evals_student_assistant_judge_prompt(),
+            },
+            commit_message="Agent E2E tests added",
+            verify_repo="evals",
+            verify_file="student-assistant/student_assistant_tests.yaml",
+            description="Add student-assistant eval test files",
         ))
 
-        # 10. Verify calendar API pods
+        # 7. Verify calendar-mcp running in test
         steps.append(CheckPodRunningStep(
             label="app.kubernetes.io/instance=canopy-mcp-calendar",
-            namespace=ns,
-            description="Verify MCP Calendar pods running",
+            namespace=test_ns,
+            description="Verify MCP Calendar pods running in test",
         ))
 
         return steps
