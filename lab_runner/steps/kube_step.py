@@ -136,7 +136,7 @@ class CreateNotebookCRStep(Step):
             f"                  --ServerApp.base_url=/notebook/{ns}/{ns}\n"
             f"                  --ServerApp.quit_button=False"
         )
-        image = "image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/ai501-custom-code-server:0.6"
+        image = "image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/ai501-custom-code-server:0.9"
 
         manifest = yaml.dump({
             "apiVersion": "kubeflow.org/v1",

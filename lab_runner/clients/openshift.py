@@ -131,6 +131,17 @@ def pod_is_running(label: str, namespace: str | None = None) -> bool:
     return False
 
 
+def all_pods_running(label: str, namespace: str | None = None, min_count: int = 1) -> bool:
+    pods = get_pods(label, namespace)
+    if len(pods) < min_count:
+        return False
+    return all(
+        p.get("status", {}).get("phase") == "Running"
+        and all(c.get("ready", False) for c in p.get("status", {}).get("containerStatuses", []))
+        for p in pods
+    )
+
+
 def exec_in_pod(
     pod_label: str,
     namespace: str,

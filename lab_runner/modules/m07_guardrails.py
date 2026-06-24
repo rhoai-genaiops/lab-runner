@@ -56,7 +56,7 @@ class GuardrailsModule(Module):
 
         # 3. Verify guardrails running in test
         steps.append(CheckPodRunningStep(
-            label="app.kubernetes.io/name=nemo-guardrails-orchestrator",
+            label="app=canopy-guardrails",
             namespace=test_ns,
             description="Verify NeMo Guardrails Orchestrator running in test",
         ))

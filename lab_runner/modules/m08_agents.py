@@ -7,7 +7,7 @@ from lab_runner.steps.base import Step
 from lab_runner.steps.kube_step import WaitForArgoCDAppsStep
 from lab_runner.steps.git_step import CloneAndModifyStep
 from lab_runner.steps.mlflow_step import CreateMLflowPromptStep
-from lab_runner.steps.verify_step import CheckPodRunningStep
+from lab_runner.steps.verify_step import CheckPodRunningStep, CheckAllPodsRunningStep
 
 
 class AgentsModule(Module):
@@ -91,10 +91,11 @@ class AgentsModule(Module):
             description="Add student-assistant eval test files",
         ))
 
-        # 7. Verify calendar-mcp running in test
-        steps.append(CheckPodRunningStep(
-            label="app.kubernetes.io/instance=canopy-mcp-calendar",
+        # 7. Verify all MCP Calendar pods running in test
+        steps.append(CheckAllPodsRunningStep(
+            label="app.kubernetes.io/name=canopy-mcp-calendar",
             namespace=test_ns,
+            min_count=3,
             description="Verify MCP Calendar pods running in test",
         ))
 

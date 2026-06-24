@@ -22,6 +22,8 @@ CHART_DOC_INGESTION = "charts/canopy-doc-ingestion-pipeline"
 
 SYSTEM_PROMPT = "Summarize the following text clearly and concisely."
 MLFLOW_PROMPT_NAME = "summarization"
+INFORMATION_SEARCH_PROMPT = "You are a helpful assistant specializing in document intelligence and academic content analysis."
+INFORMATION_SEARCH_PROMPT_NAME = "information-search"
 MODEL_NAME = "llama32"
 
 CANOPY_UI_VALUES = {
@@ -63,7 +65,7 @@ CANOPY_UI_UPGRADE_VALUES_M03 = {
     "MODEL_NAME": MODEL_NAME,
     "LLM_ENDPOINT": "",  # set dynamically
     "BACKEND_ENDPOINT": "http://canopy-backend:8000",
-    "image": {"name": "canopy-ui", "tag": "0.11"},
+    "image": {"name": "canopy-ui", "tag": "0.10"},
 }
 
 MINIO_VALUES = {

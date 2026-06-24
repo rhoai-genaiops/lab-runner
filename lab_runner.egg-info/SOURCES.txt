@@ -16,6 +16,7 @@ lab_runner/clients/__init__.py
 lab_runner/clients/git.py
 lab_runner/clients/gitea.py
 lab_runner/clients/helm.py
+lab_runner/clients/mlflow.py
 lab_runner/clients/openshift.py
 lab_runner/modules/__init__.py
 lab_runner/modules/base.py
@@ -27,7 +28,7 @@ lab_runner/modules/m06_observability.py
 lab_runner/modules/m07_guardrails.py
 lab_runner/modules/m08_agents.py
 lab_runner/modules/m09_onprem.py
-lab_runner/modules/m10_optimization.py
+lab_runner/modules/m10_model_optimization.py
 lab_runner/modules/m11_maas.py
 lab_runner/modules/m12_finetuning.py
 lab_runner/steps/__init__.py
@@ -35,6 +36,8 @@ lab_runner/steps/base.py
 lab_runner/steps/git_step.py
 lab_runner/steps/helm_step.py
 lab_runner/steps/kube_step.py
+lab_runner/steps/mlflow_step.py
 lab_runner/steps/verify_step.py
 lab_runner/steps/webhook_step.py
 lab_runner/templates/index.html
+venv/bin/jp.py

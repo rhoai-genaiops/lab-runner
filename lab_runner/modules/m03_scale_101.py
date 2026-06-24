@@ -1,4 +1,4 @@
-"""Module 3: Ready to Scale 101 - LlamaStack, workbench, GitOps pipeline."""
+"""Module 3: Ready to Scale 101 - Workbench, Canopy Backend, GitOps pipeline."""
 
 from lab_runner.config import Config
 from lab_runner import defaults
@@ -44,39 +44,7 @@ class Scale101Module(Module):
 
         steps: list[Step] = []
 
-        # 1. Install llama-stack
-        steps.append(HelmInstallStep(
-            release_name="llama-stack-operator-instance",
-            chart=defaults.CHART_LLAMA_STACK,
-            namespace=ns,
-            values=defaults.LLAMA_STACK_VALUES,
-            description="Install LlamaStack operator instance",
-        ))
-
-        # 2. Wait for llama-stack pod
-        steps.append(WaitForReadyStep(
-            label="app.kubernetes.io/instance=llama-stack",
-            namespace=ns,
-            description="Wait for LlamaStack pod ready",
-        ))
-
-        # 3. Install llama-stack-playground
-        steps.append(HelmInstallStep(
-            release_name="llama-stack-playground",
-            chart=defaults.CHART_LLAMA_STACK_PLAYGROUND,
-            namespace=ns,
-            values=defaults.LLAMA_STACK_PLAYGROUND_VALUES,
-            description="Install LlamaStack Playground",
-        ))
-
-        # 4. Wait for playground
-        steps.append(WaitForReadyStep(
-            label="app.kubernetes.io/name=llama-stack-playground",
-            namespace=ns,
-            description="Wait for LlamaStack Playground ready",
-        ))
-
-        # 5. Create workbench notebook CR
+        # 1. Create workbench notebook CR
         steps.append(CreateNotebookCRStep(
             namespace=ns,
         ))
@@ -116,8 +84,8 @@ class Scale101Module(Module):
             namespace=ns,
             values=ui_values,
             verify_key="image.tag",
-            verify_value="0.11",
-            description="Upgrade Canopy UI (add backend, image 0.11)",
+            verify_value="0.10",
+            description="Upgrade Canopy UI (add backend, image 0.10)",
         ))
 
         # 10. Wait for UI redeployed

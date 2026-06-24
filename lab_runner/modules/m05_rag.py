@@ -8,6 +8,7 @@ from lab_runner.steps.kube_step import WaitForArgoCDAppsStep
 from lab_runner.steps.git_step import CloneAndModifyStep
 from lab_runner.steps.webhook_step import ConfigureMinIOWebhookStep, UploadDocumentToMinIOStep
 from lab_runner.steps.verify_step import CheckPodRunningStep
+from lab_runner.steps.mlflow_step import CreateMLflowPromptStep
 
 
 class RAGModule(Module):
@@ -136,6 +137,13 @@ class RAGModule(Module):
             description="Wait for doc ingestion pipeline deployed",
         ))
 
+        # 9.5 Wait for doc-ingestion EventListener pod to be ready
+        steps.append(CheckPodRunningStep(
+            label="eventlistener=canopy-doc-ingestion-event-listener",
+            namespace=toolings_ns,
+            description="Wait for doc-ingestion EventListener pod ready",
+        ))
+
         # 10. Configure MinIO webhook: documents bucket → doc ingestion Tekton pipeline
         doc_ingestion_el_url = (
             f"http://el-canopy-doc-ingestion-event-listener"
@@ -156,7 +164,17 @@ class RAGModule(Module):
             description="Upload PDF to MinIO documents bucket",
         ))
 
-        # 12. Verify Milvus running in test
+        # 12. Register information-search prompt in toolings MLflow (with prod alias)
+        steps.append(CreateMLflowPromptStep(
+            name=defaults.INFORMATION_SEARCH_PROMPT_NAME,
+            template=defaults.INFORMATION_SEARCH_PROMPT,
+            namespace=toolings_ns,
+            aliases=["prod"],
+            commit_message="Production information-search prompt",
+            description=f"Register '{defaults.INFORMATION_SEARCH_PROMPT_NAME}' prompt in {toolings_ns} MLflow (alias: prod)",
+        ))
+
+        # 13. Verify Milvus running in test
         steps.append(CheckPodRunningStep(
             label="app.kubernetes.io/name=milvus",
             namespace=test_ns,
