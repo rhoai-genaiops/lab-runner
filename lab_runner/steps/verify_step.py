@@ -85,6 +85,34 @@ class CheckPodRunningStep(Step):
         return False
 
 
+class CheckAllPodsRunningStep(Step):
+    """Verify that all pods matching a label are running, with retries."""
+
+    def __init__(self, label: str, namespace: str, min_count: int = 1, timeout: int = 300, description: str | None = None):
+        self.label = label
+        self.namespace = namespace
+        self.min_count = min_count
+        self.timeout = timeout
+        self.description = description or f"Verify all pods running: {label}"
+        self.active_description = f"Checking pods {label}..."
+
+    def verify(self, config: Config) -> bool:
+        return oc.all_pods_running(self.label, self.namespace, self.min_count)
+
+    def run(self, config: Config) -> StepResult:
+        import time
+
+        deadline = time.time() + self.timeout
+        while time.time() < deadline:
+            if oc.all_pods_running(self.label, self.namespace, self.min_count):
+                return StepResult.success()
+            time.sleep(10)
+        return StepResult.failed(f"Not all pods with label '{self.label}' running in {self.namespace} after {self.timeout}s")
+
+    def skip_if_done(self) -> bool:
+        return False
+
+
 class CheckHelmReleaseStep(Step):
     """Verify that a Helm release exists."""
 

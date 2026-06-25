@@ -1,4 +1,4 @@
-"""Module 3: Ready to Scale 101 - LlamaStack, workbench, GitOps pipeline."""
+"""Module 3: Ready to Scale 101 - Workbench, Canopy Backend, GitOps pipeline."""
 
 from lab_runner.config import Config
 from lab_runner import defaults
@@ -16,6 +16,7 @@ from lab_runner.steps.git_step import (
     CloneInsideWorkbenchStep,
     SetGitConfigInWorkbenchStep,
 )
+from lab_runner.steps.mlflow_step import CreateMLflowPromptStep
 from lab_runner.steps.webhook_step import CreateGiteaWebhookStep
 from lab_runner.steps.verify_step import CheckPodRunningStep
 
@@ -43,39 +44,7 @@ class Scale101Module(Module):
 
         steps: list[Step] = []
 
-        # 1. Install llama-stack
-        steps.append(HelmInstallStep(
-            release_name="llama-stack-operator-instance",
-            chart=defaults.CHART_LLAMA_STACK,
-            namespace=ns,
-            values=defaults.LLAMA_STACK_VALUES,
-            description="Install LlamaStack operator instance",
-        ))
-
-        # 2. Wait for llama-stack pod
-        steps.append(WaitForReadyStep(
-            label="app.kubernetes.io/instance=llama-stack",
-            namespace=ns,
-            description="Wait for LlamaStack pod ready",
-        ))
-
-        # 3. Install llama-stack-playground
-        steps.append(HelmInstallStep(
-            release_name="llama-stack-playground",
-            chart=defaults.CHART_LLAMA_STACK_PLAYGROUND,
-            namespace=ns,
-            values=defaults.LLAMA_STACK_PLAYGROUND_VALUES,
-            description="Install LlamaStack Playground",
-        ))
-
-        # 4. Wait for playground
-        steps.append(WaitForReadyStep(
-            label="app.kubernetes.io/name=llama-stack-playground",
-            namespace=ns,
-            description="Wait for LlamaStack Playground ready",
-        ))
-
-        # 5. Create workbench notebook CR
+        # 1. Create workbench notebook CR
         steps.append(CreateNotebookCRStep(
             namespace=ns,
         ))
@@ -115,8 +84,8 @@ class Scale101Module(Module):
             namespace=ns,
             values=ui_values,
             verify_key="image.tag",
-            verify_value="0.6",
-            description="Upgrade Canopy UI (add backend, image 0.6)",
+            verify_value="0.10",
+            description="Upgrade Canopy UI (add backend, image 0.10)",
         ))
 
         # 10. Wait for UI redeployed
@@ -158,7 +127,17 @@ class Scale101Module(Module):
             description="Wait for tooling ArgoCD apps to sync",
         ))
 
-        # 14. Git: clone backend, create values-test.yaml + values-prod.yaml
+        # 14. Register summarization prompt in toolings MLflow (with prod alias)
+        steps.append(CreateMLflowPromptStep(
+            name=defaults.MLFLOW_PROMPT_NAME,
+            template=defaults.SYSTEM_PROMPT,
+            namespace=toolings_ns,
+            aliases=["prod"],
+            commit_message="Production summarization prompt",
+            description=f"Register '{defaults.MLFLOW_PROMPT_NAME}' prompt in {toolings_ns} MLflow (alias: prod)",
+        ))
+
+        # 15. Git: clone backend, create values-test.yaml + values-prod.yaml
         steps.append(CloneAndModifyStep(
             repo_url=config.backend_repo_url,
             modifications={
@@ -168,20 +147,18 @@ class Scale101Module(Module):
             commit_message="Add values-test.yaml and values-prod.yaml",
             verify_repo="backend",
             verify_file="chart/values-test.yaml",
-            verify_content="summarize",
+            verify_content="summarization",
             description="Add backend values files for test and prod",
         ))
 
-        # 15. Git: add canopy/{test,prod}/{frontend,backend,llama-stack}/config.yaml + appsets
+        # 16. Git: add canopy/{test,prod}/{frontend,backend}/config.yaml + appsets
         steps.append(CloneAndModifyStep(
             repo_url=config.gitops_repo_url,
             modifications={
                 "canopy/test/frontend/config.yaml": defaults.gitops_test_frontend_config_yaml(),
                 "canopy/test/backend/config.yaml": defaults.gitops_test_backend_config_yaml(config.username, config.cluster_domain),
-                "canopy/test/llama-stack/config.yaml": defaults.gitops_test_llama_stack_config_yaml(),
                 "canopy/prod/frontend/config.yaml": defaults.gitops_prod_frontend_config_yaml(),
                 "canopy/prod/backend/config.yaml": defaults.gitops_prod_backend_config_yaml(config.username, config.cluster_domain),
-                "canopy/prod/llama-stack/config.yaml": defaults.gitops_prod_llama_stack_config_yaml(),
                 "appset-test.yaml": defaults.appset_test_yaml(config.username, config.cluster_domain),
                 "appset-prod.yaml": defaults.appset_prod_yaml(config.username, config.cluster_domain),
             },
@@ -192,7 +169,7 @@ class Scale101Module(Module):
             description="Add test/prod configs and ApplicationSets to genaiops-gitops",
         ))
 
-        # 16. Apply appset-test.yaml + appset-prod.yaml
+        # 17. Apply appset-test.yaml + appset-prod.yaml
         steps.append(ApplyManifestStep(
             manifest=defaults.appset_test_yaml(config.username, config.cluster_domain),
             namespace=toolings_ns,
@@ -208,30 +185,29 @@ class Scale101Module(Module):
             description="Apply prod ApplicationSet",
         ))
 
-        # 17. Wait for test/prod ArgoCD apps
+        # 18. Wait for test/prod ArgoCD apps (no llama-stack — pre-deployed platform infra)
         steps.append(WaitForArgoCDAppsStep(
-            app_names=["frontend-test", "backend-test", "llama-stack-test",
-                        "frontend-prod", "backend-prod", "llama-stack-prod"],
+            app_names=["frontend-test", "backend-test", "frontend-prod", "backend-prod"],
             namespace=toolings_ns,
             timeout=600,
             description="Wait for test/prod ArgoCD apps to sync",
         ))
 
-        # 18. Create Gitea webhook: genaiops-gitops → ArgoCD
+        # 19. Create Gitea webhook: genaiops-gitops → ArgoCD
         steps.append(CreateGiteaWebhookStep(
             repo_name="genaiops-gitops",
             target_url=argocd_webhook_url,
             description="Create webhook: genaiops-gitops → ArgoCD",
         ))
 
-        # 19. Create Gitea webhook: backend → ArgoCD
+        # 20. Create Gitea webhook: backend → ArgoCD
         steps.append(CreateGiteaWebhookStep(
             repo_name="backend",
             target_url=argocd_webhook_url,
             description="Create webhook: backend → ArgoCD",
         ))
 
-        # 20. Clone repos inside workbench
+        # 21. Clone repos inside workbench
         steps.append(CloneInsideWorkbenchStep(
             repos=[
                 (config.experiments_repo_url, "experiments"),
@@ -242,10 +218,10 @@ class Scale101Module(Module):
             description="Clone repos inside workbench",
         ))
 
-        # 21. Set git config inside workbench
+        # 22. Set git config inside workbench
         steps.append(SetGitConfigInWorkbenchStep(namespace=ns))
 
-        # 22. Verify: all deployments healthy
+        # 23. Verify: all deployments healthy
         for env_ns, env_name in [(test_ns, "test"), (prod_ns, "prod")]:
             steps.append(CheckPodRunningStep(
                 label="app.kubernetes.io/name=canopy-be",

@@ -84,6 +84,36 @@ class LiteMaaSInstallStep(Step):
             return StepResult.failed(str(e))
 
 
+class EnableLiteLLMSchemaStep(Step):
+    """Patch litellm deployment to disable schema update protection."""
+
+    def __init__(self, namespace: str, description: str | None = None):
+        self.namespace = namespace
+        self.description = description or "Enable LiteLLM schema update"
+        self.active_description = "Patching LiteLLM deployment..."
+
+    def verify(self, config: Config) -> bool:
+        import subprocess
+        r = subprocess.run(
+            ["oc", "get", "deployment", "litemaas-litellm",
+             "-n", self.namespace, "-o",
+             "jsonpath={.spec.template.spec.containers[0].env[?(@.name=='DISABLE_SCHEMA_UPDATE')].value}"],
+            capture_output=True, text=True, check=False, timeout=30,
+        )
+        return r.stdout.strip() == "false"
+
+    def run(self, config: Config) -> StepResult:
+        import subprocess
+        r = subprocess.run(
+            ["oc", "set", "env", "deployment/litemaas-litellm",
+             "DISABLE_SCHEMA_UPDATE=false", "-n", self.namespace],
+            capture_output=True, text=True, check=False, timeout=30,
+        )
+        if r.returncode != 0:
+            return StepResult.failed(r.stderr or r.stdout)
+        return StepResult.success(output=r.stdout)
+
+
 class MaaSModule(Module):
     @property
     def id(self) -> int:
@@ -95,7 +125,7 @@ class MaaSModule(Module):
 
     @property
     def dependencies(self) -> list[int]:
-        return [9, 10]
+        return [10]
 
     def get_steps(self, config: Config) -> list[Step]:
         maas_ns = config.maas_namespace
@@ -114,7 +144,13 @@ class MaaSModule(Module):
             description="Install LiteMaaS via Helm",
         ))
 
-        # 3. Wait for LiteMaaS pods ready
+        # 3. Patch LiteLLM to enable schema update
+        steps.append(EnableLiteLLMSchemaStep(
+            namespace=maas_ns,
+            description="Enable LiteLLM schema update (DISABLE_SCHEMA_UPDATE=false)",
+        ))
+
+        # 4. Wait for LiteMaaS pods ready
         steps.append(WaitForReadyStep(
             label="app.kubernetes.io/instance=litemaas",
             namespace=maas_ns,
@@ -122,7 +158,7 @@ class MaaSModule(Module):
             description="Wait for LiteMaaS pods ready",
         ))
 
-        # 4. Verify LiteMaaS route accessible
+        # 5. Verify LiteMaaS route accessible
         steps.append(CheckRouteAccessibleStep(
             url=f"https://litemaas-{maas_ns}.{config.cluster_domain}",
             retries=12,
