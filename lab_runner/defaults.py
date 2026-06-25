@@ -337,6 +337,27 @@ summarization:
 """
 
 
+def gitops_prod_backend_rag_config_yaml(username: str, cluster_domain: str) -> str:
+    """Backend config for prod env with RAG (information-search) enabled."""
+    return f"""\
+repo_url: https://gitea-gitea.{cluster_domain}/{username}/backend
+chart_path: chart
+summarization:
+  enabled: true
+  model: llama32
+  endpoint: "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"
+  mlflow_prompt: {MLFLOW_PROMPT_NAME}
+  mlflow_prompt_version: prod
+information-search:
+  enabled: true
+  endpoint: "http://llama-stack-service:8321/v1"
+  model: vllm-llama32/llama32
+  vector_db_id: latest
+  mlflow_prompt: information-search
+  mlflow_prompt_version: prod
+"""
+
+
 def gitops_test_backend_rag_config_yaml(username: str, cluster_domain: str) -> str:
     """Backend config for test env with RAG (information-search) enabled."""
     return f"""\

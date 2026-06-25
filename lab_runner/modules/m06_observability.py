@@ -43,7 +43,7 @@ class ObservabilityModule(Module):
         steps.append(WaitForArgoCDAppsStep(
             app_names=["grafana"],
             namespace=toolings_ns,
-            timeout=300,
+            timeout=600,
             description="Wait for Grafana deployed via ArgoCD",
         ))
 

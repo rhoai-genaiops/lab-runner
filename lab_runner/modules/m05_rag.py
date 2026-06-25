@@ -87,19 +87,22 @@ class RAGModule(Module):
             description="Add documents bucket to MinIO tooling config",
         ))
 
-        # 6. Enable information-search in test backend gitops config
+        # 6. Enable information-search in test and prod backend gitops config
         steps.append(CloneAndModifyStep(
             repo_url=config.gitops_repo_url,
             modifications={
                 "canopy/test/backend/config.yaml": defaults.gitops_test_backend_rag_config_yaml(
                     config.username, config.cluster_domain
                 ),
+                "canopy/prod/backend/config.yaml": defaults.gitops_prod_backend_rag_config_yaml(
+                    config.username, config.cluster_domain
+                ),
             },
-            commit_message="Add RAG feature added",
+            commit_message="Add RAG feature to test and prod",
             verify_repo="genaiops-gitops",
             verify_file="canopy/test/backend/config.yaml",
             verify_content="information-search",
-            description="Enable information-search in test backend gitops config",
+            description="Enable information-search in test and prod backend gitops config",
         ))
 
         # 7. Create evals/information-search test files
