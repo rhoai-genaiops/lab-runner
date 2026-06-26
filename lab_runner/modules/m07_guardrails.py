@@ -34,8 +34,8 @@ class GuardrailsModule(Module):
             modifications={
                 "canopy/test/nemo-guardrails-orchestrator/config.yaml": defaults.nemo_guardrails_config_yaml(),
                 "canopy/prod/nemo-guardrails-orchestrator/config.yaml": defaults.nemo_guardrails_config_yaml(),
-                "canopy/test/ogx/config.yaml": defaults.gitops_ogx_guardrails_config_yaml("test"),
-                "canopy/prod/ogx/config.yaml": defaults.gitops_ogx_guardrails_config_yaml("prod"),
+                "canopy/test/ogx/config.yaml": defaults.gitops_ogx_guardrails_config_yaml("test", config.username),
+                "canopy/prod/ogx/config.yaml": defaults.gitops_ogx_guardrails_config_yaml("prod", config.username),
                 "canopy/test/backend/config.yaml": defaults.gitops_test_backend_guardrails_config_yaml(
                     config.username, config.cluster_domain
                 ),

@@ -42,7 +42,7 @@ class AgentsModule(Module):
         steps.append(CloneAndModifyStep(
             repo_url=config.gitops_repo_url,
             modifications={
-                "canopy/test/ogx/config.yaml": defaults.gitops_ogx_mcp_config_yaml("test"),
+                "canopy/test/ogx/config.yaml": defaults.gitops_ogx_mcp_config_yaml("test", config.username),
                 "canopy/test/calendar-mcp/config.yaml": defaults.calendar_mcp_config_yaml(),
                 "canopy/test/backend/config.yaml": defaults.gitops_test_backend_agents_config_yaml(
                     config.username, config.cluster_domain

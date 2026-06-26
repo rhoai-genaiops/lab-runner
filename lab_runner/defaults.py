@@ -446,14 +446,27 @@ LLAMA_STACK_RAG_VALUES = {
     ],
 }
 
+def milvus_externalname_manifest(service_name: str, target_namespace: str) -> str:
+    return f"""\
+apiVersion: v1
+kind: Service
+metadata:
+  name: {service_name}
+spec:
+  type: ExternalName
+  externalName: {service_name}.{target_namespace}.svc.cluster.local
+"""
+
+
 def milvus_config_yaml(env: str) -> str:
     return f"""---
 chart_path: charts/milvus
 """
 
 
-def gitops_ogx_config_yaml(env: str) -> str:
+def gitops_ogx_config_yaml(env: str, username: str) -> str:
     service = f"milvus-{env}"
+    milvus_ns = f"{username}-{env}"
     return f"""---
 chart_path: charts/llama-stack-operator-instance
 models:
@@ -463,6 +476,7 @@ rag:
   enabled: true
   milvus:
     service: "{service}"
+    namespace: "{milvus_ns}"
 """
 
 
@@ -605,8 +619,9 @@ chart_path: charts/nemo-guardrails-orchestrator
 """
 
 
-def gitops_ogx_guardrails_config_yaml(env: str) -> str:
+def gitops_ogx_guardrails_config_yaml(env: str, username: str) -> str:
     service = f"milvus-{env}"
+    milvus_ns = f"{username}-{env}"
     return f"""---
 chart_path: charts/llama-stack-operator-instance
 models:
@@ -616,6 +631,7 @@ rag:
   enabled: true
   milvus:
     service: "{service}"
+    namespace: "{milvus_ns}"
 guardrails:
   enabled: true
 """
@@ -697,8 +713,9 @@ LLAMA_STACK_MCP_VALUES = {
 }
 
 
-def gitops_ogx_mcp_config_yaml(env: str) -> str:
+def gitops_ogx_mcp_config_yaml(env: str, username: str) -> str:
     service = f"milvus-{env}"
+    milvus_ns = f"{username}-{env}"
     return f"""---
 chart_path: charts/llama-stack-operator-instance
 models:
@@ -708,6 +725,7 @@ rag:
   enabled: true
   milvus:
     service: "{service}"
+    namespace: "{milvus_ns}"
 guardrails:
   enabled: true
 mcp:
@@ -953,9 +971,10 @@ LLAMA_STACK_FP8_VALUES = {
 }
 
 
-def gitops_ogx_fp8_config_yaml() -> str:
+def gitops_ogx_fp8_config_yaml(username: str) -> str:
     """OGX config with both llama32 and llama32-fp8 models."""
-    return """---
+    milvus_ns = f"{username}-test"
+    return f"""---
 chart_path: charts/llama-stack-operator-instance
 models:
   - name: "llama32"
@@ -966,6 +985,7 @@ rag:
   enabled: true
   milvus:
     service: "milvus-test"
+    namespace: "{milvus_ns}"
 guardrails:
   enabled: true
 mcp:
