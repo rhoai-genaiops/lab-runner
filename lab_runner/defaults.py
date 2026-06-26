@@ -440,8 +440,10 @@ CLUSTER_DOMAIN: {cluster_domain}
 
 LLAMA_STACK_RAG_VALUES = {
     **LLAMA_STACK_VALUES,
-    "eval": {"enabled": True},
     "rag": {"enabled": True, "milvus": {"service": "milvus-test"}},
+    "models": [
+        {"name": "llama32", "url": "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"},
+    ],
 }
 
 def milvus_config_yaml(env: str) -> str:
@@ -922,17 +924,7 @@ spec:
 
 def llama_stack_onprem_values(namespace: str) -> dict:
     return {
-        **LLAMA_STACK_VALUES,
-        "eval": {"enabled": True},
-        "rag": {"enabled": True, "milvus": {"service": "milvus-test"}},
-        "guardrails": {
-            "enabled": True,
-            "regex": {"enabled": True, "filter": ["(?i).*fight club.*"]},
-            "hap": {"enabled": True},
-            "prompt_injection": {"enabled": True},
-            "language_detection": {"enabled": True},
-        },
-        "mcp": {"enabled": True},
+        **LLAMA_STACK_RAG_VALUES,
         "models": [
             {"name": "llama32", "url": "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"},
             {"name": "tinyllama", "url": f"http://tinyllama-predictor.{namespace}.svc.cluster.local:8080/v1"},

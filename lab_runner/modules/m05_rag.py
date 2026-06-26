@@ -4,11 +4,12 @@ from lab_runner.config import Config
 from lab_runner import defaults
 from lab_runner.modules.base import Module
 from lab_runner.steps.base import Step
-from lab_runner.steps.kube_step import WaitForArgoCDAppsStep
+from lab_runner.steps.kube_step import WaitForArgoCDAppsStep, WaitForReadyStep
 from lab_runner.steps.git_step import CloneAndModifyStep
 from lab_runner.steps.webhook_step import ConfigureMinIOWebhookStep, UploadDocumentToMinIOStep
 from lab_runner.steps.verify_step import CheckPodRunningStep
 from lab_runner.steps.mlflow_step import CreateMLflowPromptStep
+from lab_runner.steps.helm_step import HelmInstallStep
 
 
 class RAGModule(Module):
@@ -31,7 +32,23 @@ class RAGModule(Module):
 
         steps: list[Step] = []
 
-        # 1. Add Milvus configs for test and prod
+        # 1. Install llama-stack (OGX) in userX-canopy
+        steps.append(HelmInstallStep(
+            release_name="llama-stack-operator-instance",
+            chart=defaults.CHART_LLAMA_STACK,
+            namespace=ns,
+            values=defaults.LLAMA_STACK_RAG_VALUES,
+            description="Install LlamaStack (OGX) in canopy namespace",
+        ))
+
+        # 1.5 Wait for llama-stack ready
+        steps.append(WaitForReadyStep(
+            label="app.kubernetes.io/name=llama-stack-operator-instance",
+            namespace=ns,
+            description="Wait for LlamaStack ready in canopy",
+        ))
+
+        # 2. Add Milvus configs for test and prod
         steps.append(CloneAndModifyStep(
             repo_url=config.gitops_repo_url,
             modifications={
