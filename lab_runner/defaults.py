@@ -446,6 +446,18 @@ LLAMA_STACK_RAG_VALUES = {
     ],
 }
 
+def milvus_externalname_manifest(service_name: str, target_namespace: str) -> str:
+    return f"""\
+apiVersion: v1
+kind: Service
+metadata:
+  name: {service_name}
+spec:
+  type: ExternalName
+  externalName: {service_name}.{target_namespace}.svc.cluster.local
+"""
+
+
 def milvus_config_yaml(env: str) -> str:
     return f"""---
 chart_path: charts/milvus
@@ -928,11 +940,9 @@ spec:
       storageUri: 'oci://quay.io/rh-aiservices-bu/tinyllama:1.0'
 """
 
-def llama_stack_onprem_values(namespace: str, username: str) -> dict:
-    milvus_ns = f"{username}-test"
+def llama_stack_onprem_values(namespace: str) -> dict:
     return {
         **LLAMA_STACK_RAG_VALUES,
-        "rag": {"enabled": True, "milvus": {"service": "milvus-test", "namespace": milvus_ns}},
         "models": [
             {"name": "llama32", "url": "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"},
             {"name": "tinyllama", "url": f"http://tinyllama-predictor.{namespace}.svc.cluster.local:8080/v1"},

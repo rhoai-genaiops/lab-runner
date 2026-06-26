@@ -4,7 +4,7 @@ from lab_runner.config import Config
 from lab_runner import defaults
 from lab_runner.modules.base import Module
 from lab_runner.steps.base import Step
-from lab_runner.steps.kube_step import WaitForArgoCDAppsStep, WaitForReadyStep
+from lab_runner.steps.kube_step import ApplyManifestStep, WaitForArgoCDAppsStep, WaitForReadyStep
 from lab_runner.steps.git_step import CloneAndModifyStep
 from lab_runner.steps.webhook_step import ConfigureMinIOWebhookStep, UploadDocumentToMinIOStep
 from lab_runner.steps.verify_step import CheckPodRunningStep
@@ -32,23 +32,7 @@ class RAGModule(Module):
 
         steps: list[Step] = []
 
-        # 1. Install llama-stack (OGX) in userX-canopy
-        steps.append(HelmInstallStep(
-            release_name="llama-stack-operator-instance",
-            chart=defaults.CHART_LLAMA_STACK,
-            namespace=ns,
-            values={**defaults.LLAMA_STACK_RAG_VALUES, "rag": {"enabled": True, "milvus": {"service": "milvus-test", "namespace": config.test_namespace}}},
-            description="Install LlamaStack (OGX) in canopy namespace",
-        ))
-
-        # 1.5 Wait for llama-stack ready
-        steps.append(WaitForReadyStep(
-            label="app=llama-stack",
-            namespace=ns,
-            description="Wait for LlamaStack ready in canopy",
-        ))
-
-        # 2. Add Milvus configs for test and prod
+        # 1. Add Milvus configs for test and prod
         steps.append(CloneAndModifyStep(
             repo_url=config.gitops_repo_url,
             modifications={
@@ -67,6 +51,31 @@ class RAGModule(Module):
             namespace=toolings_ns,
             timeout=600,
             description="Wait for Milvus deployed in test and prod",
+        ))
+
+        # 3. Create ExternalName service so milvus-test resolves across namespaces
+        steps.append(ApplyManifestStep(
+            manifest=defaults.milvus_externalname_manifest("milvus-test", test_ns),
+            namespace=ns,
+            resource_type="service",
+            resource_name="milvus-test",
+            description="Create Milvus ExternalName service in canopy",
+        ))
+
+        # 4. Install llama-stack (OGX) in userX-canopy
+        steps.append(HelmInstallStep(
+            release_name="llama-stack-operator-instance",
+            chart=defaults.CHART_LLAMA_STACK,
+            namespace=ns,
+            values=defaults.LLAMA_STACK_RAG_VALUES,
+            description="Install LlamaStack (OGX) in canopy namespace",
+        ))
+
+        # 5. Wait for llama-stack ready
+        steps.append(WaitForReadyStep(
+            label="app=llama-stack",
+            namespace=ns,
+            description="Wait for LlamaStack ready in canopy",
         ))
 
         # 3. Add OGX (llama-stack-operator-instance) configs for test and prod
