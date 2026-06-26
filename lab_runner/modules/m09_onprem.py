@@ -48,7 +48,7 @@ class OnPremModule(Module):
             release_name="llama-stack-operator-instance",
             chart=defaults.CHART_LLAMA_STACK,
             namespace=ns,
-            values=defaults.llama_stack_onprem_values(ns),
+            values=defaults.llama_stack_onprem_values(ns, config.username),
             description="Upgrade LlamaStack (add TinyLlama model)",
         ))
 

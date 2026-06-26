@@ -37,13 +37,13 @@ class RAGModule(Module):
             release_name="llama-stack-operator-instance",
             chart=defaults.CHART_LLAMA_STACK,
             namespace=ns,
-            values=defaults.LLAMA_STACK_RAG_VALUES,
+            values={**defaults.LLAMA_STACK_RAG_VALUES, "rag": {"enabled": True, "milvus": {"service": "milvus-test", "namespace": config.test_namespace}}},
             description="Install LlamaStack (OGX) in canopy namespace",
         ))
 
         # 1.5 Wait for llama-stack ready
         steps.append(WaitForReadyStep(
-            label="app.kubernetes.io/name=llama-stack-operator-instance",
+            label="app=llama-stack",
             namespace=ns,
             description="Wait for LlamaStack ready in canopy",
         ))
@@ -73,8 +73,8 @@ class RAGModule(Module):
         steps.append(CloneAndModifyStep(
             repo_url=config.gitops_repo_url,
             modifications={
-                "canopy/test/ogx/config.yaml": defaults.gitops_ogx_config_yaml("test"),
-                "canopy/prod/ogx/config.yaml": defaults.gitops_ogx_config_yaml("prod"),
+                "canopy/test/ogx/config.yaml": defaults.gitops_ogx_config_yaml("test", config.username),
+                "canopy/prod/ogx/config.yaml": defaults.gitops_ogx_config_yaml("prod", config.username),
             },
             commit_message="Add Open GenAI Stack instances",
             verify_repo="genaiops-gitops",

@@ -452,8 +452,9 @@ chart_path: charts/milvus
 """
 
 
-def gitops_ogx_config_yaml(env: str) -> str:
+def gitops_ogx_config_yaml(env: str, username: str) -> str:
     service = f"milvus-{env}"
+    milvus_ns = f"{username}-{env}"
     return f"""---
 chart_path: charts/llama-stack-operator-instance
 models:
@@ -463,6 +464,7 @@ rag:
   enabled: true
   milvus:
     service: "{service}"
+    namespace: "{milvus_ns}"
 """
 
 
@@ -605,8 +607,9 @@ chart_path: charts/nemo-guardrails-orchestrator
 """
 
 
-def gitops_ogx_guardrails_config_yaml(env: str) -> str:
+def gitops_ogx_guardrails_config_yaml(env: str, username: str) -> str:
     service = f"milvus-{env}"
+    milvus_ns = f"{username}-{env}"
     return f"""---
 chart_path: charts/llama-stack-operator-instance
 models:
@@ -616,6 +619,7 @@ rag:
   enabled: true
   milvus:
     service: "{service}"
+    namespace: "{milvus_ns}"
 guardrails:
   enabled: true
 """
@@ -697,8 +701,9 @@ LLAMA_STACK_MCP_VALUES = {
 }
 
 
-def gitops_ogx_mcp_config_yaml(env: str) -> str:
+def gitops_ogx_mcp_config_yaml(env: str, username: str) -> str:
     service = f"milvus-{env}"
+    milvus_ns = f"{username}-{env}"
     return f"""---
 chart_path: charts/llama-stack-operator-instance
 models:
@@ -708,6 +713,7 @@ rag:
   enabled: true
   milvus:
     service: "{service}"
+    namespace: "{milvus_ns}"
 guardrails:
   enabled: true
 mcp:
@@ -922,9 +928,11 @@ spec:
       storageUri: 'oci://quay.io/rh-aiservices-bu/tinyllama:1.0'
 """
 
-def llama_stack_onprem_values(namespace: str) -> dict:
+def llama_stack_onprem_values(namespace: str, username: str) -> dict:
+    milvus_ns = f"{username}-test"
     return {
         **LLAMA_STACK_RAG_VALUES,
+        "rag": {"enabled": True, "milvus": {"service": "milvus-test", "namespace": milvus_ns}},
         "models": [
             {"name": "llama32", "url": "http://llama-32-predictor.ai501.svc.cluster.local:8080/v1"},
             {"name": "tinyllama", "url": f"http://tinyllama-predictor.{namespace}.svc.cluster.local:8080/v1"},
@@ -953,9 +961,10 @@ LLAMA_STACK_FP8_VALUES = {
 }
 
 
-def gitops_ogx_fp8_config_yaml() -> str:
+def gitops_ogx_fp8_config_yaml(username: str) -> str:
     """OGX config with both llama32 and llama32-fp8 models."""
-    return """---
+    milvus_ns = f"{username}-test"
+    return f"""---
 chart_path: charts/llama-stack-operator-instance
 models:
   - name: "llama32"
@@ -966,6 +975,7 @@ rag:
   enabled: true
   milvus:
     service: "milvus-test"
+    namespace: "{milvus_ns}"
 guardrails:
   enabled: true
 mcp:

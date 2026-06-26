@@ -30,7 +30,7 @@ class ModelOptimizationModule(Module):
         steps.append(CloneAndModifyStep(
             repo_url=config.gitops_repo_url,
             modifications={
-                "canopy/test/ogx/config.yaml": defaults.gitops_ogx_fp8_config_yaml(),
+                "canopy/test/ogx/config.yaml": defaults.gitops_ogx_fp8_config_yaml(config.username),
                 "canopy/test/backend/config.yaml": defaults.gitops_test_backend_fp8_config_yaml(
                     config.username, config.cluster_domain
                 ),
