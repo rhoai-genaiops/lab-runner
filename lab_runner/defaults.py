@@ -466,7 +466,6 @@ chart_path: charts/milvus
 
 def gitops_ogx_config_yaml(env: str, username: str) -> str:
     service = f"milvus-{env}"
-    milvus_ns = f"{username}-{env}"
     return f"""---
 chart_path: charts/llama-stack-operator-instance
 models:
@@ -476,7 +475,6 @@ rag:
   enabled: true
   milvus:
     service: "{service}"
-    namespace: "{milvus_ns}"
 """
 
 
