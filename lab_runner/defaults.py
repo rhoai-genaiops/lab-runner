@@ -476,7 +476,6 @@ rag:
   enabled: true
   milvus:
     service: "{service}"
-    namespace: "{milvus_ns}"
 """
 
 
@@ -631,7 +630,6 @@ rag:
   enabled: true
   milvus:
     service: "{service}"
-    namespace: "{milvus_ns}"
 guardrails:
   enabled: true
 """
@@ -725,7 +723,6 @@ rag:
   enabled: true
   milvus:
     service: "{service}"
-    namespace: "{milvus_ns}"
 guardrails:
   enabled: true
 mcp:
@@ -985,7 +982,6 @@ rag:
   enabled: true
   milvus:
     service: "milvus-test"
-    namespace: "{milvus_ns}"
 guardrails:
   enabled: true
 mcp:
