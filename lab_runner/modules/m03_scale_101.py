@@ -17,6 +17,7 @@ from lab_runner.steps.git_step import (
     SetGitConfigInWorkbenchStep,
 )
 from lab_runner.steps.mlflow_step import CreateMLflowPromptStep
+from lab_runner.steps.trace_step import SeedSummarizationTraceStep
 from lab_runner.steps.webhook_step import CreateGiteaWebhookStep
 from lab_runner.steps.verify_step import CheckPodRunningStep
 
@@ -228,5 +229,12 @@ class Scale101Module(Module):
                 namespace=env_ns,
                 description=f"Verify backend running in {env_name}",
             ))
+
+        # 24. Ready to Scale 201 opens this experiment. It is created only when
+        # the canopy backend handles a summarization, which the lesson does by hand.
+        steps.append(SeedSummarizationTraceStep(
+            namespace=ns,
+            description=f"Seed summarization trace in {ns}",
+        ))
 
         return steps

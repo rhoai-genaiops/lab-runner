@@ -64,6 +64,14 @@ uvicorn lab_runner.web:app --port 8080
 
 Open `http://localhost:8080` in your browser. Enter your credentials, select modules, and click **Run Selected**. Progress streams in real-time via SSE.
 
+## Using Cursor
+
+If `oc whoami` is the student (`user1`, and so on), open this repository as the Cursor workspace and ask the agent to fast-forward that user. For example: "run modules 2 and 3" or "bring user1 up to module 5".
+
+The agent instructions are in `.cursor/skills/ai501-fast-forward/SKILL.md`. Cursor loads that skill when this repo is the workspace root. You do not put the password in the chat. The baseline install has already created the `git-auth` secret in the student's canopy project, and the skill reads it from there.
+
+"Up to module 5" runs through the end of that module. "Start module 5" stops after module 4.
+
 ## Container Image
 
 ```bash
