@@ -384,6 +384,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         <tr><th>Module</th><th>Name</th><th>Status</th><th>Steps</th></tr>
       </thead>
       <tbody id="status-body"></tbody>
+      <tfoot id="status-foot"></tfoot>
     </table>
   </div>
 
@@ -533,6 +534,21 @@ async function checkStatus() {
       `;
       tbody.appendChild(tr);
     }
+
+    const allPassed = data.reduce((n, s) => n + s.steps_passed, 0);
+    const allTotal = data.reduce((n, s) => n + s.steps_total, 0);
+    const overallClass = allPassed === allTotal ? 'complete'
+      : allPassed > 0 ? 'partial' : 'not_started';
+    const overallLabel = overallClass === 'complete' ? 'Complete'
+      : overallClass === 'partial' ? 'Partial' : 'Not started';
+    document.getElementById('status-foot').innerHTML = `
+      <tr style="font-weight:700">
+        <td></td>
+        <td>Overall</td>
+        <td class="module-status-text ${overallClass}">${overallLabel}</td>
+        <td>${allPassed}/${allTotal}</td>
+      </tr>
+    `;
     document.getElementById('status-panel').classList.add('active');
 
     // Update module cards with status

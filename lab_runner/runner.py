@@ -121,6 +121,7 @@ class Runner:
         table.add_column("Status")
         table.add_column("Steps", justify="right")
 
+        all_passed = all_total = 0
         for mid in sorted(MODULE_REGISTRY):
             module = MODULE_REGISTRY[mid]()
             steps = module.get_steps(self.config)
@@ -139,6 +140,17 @@ class Runner:
             else:
                 status = "[dim]Not started[/dim]"
             table.add_row(str(mid), module.name, status, f"{passed}/{total}")
+            all_passed += passed
+            all_total += total
+
+        if all_passed == all_total:
+            overall = "[green]Complete[/green]"
+        elif all_passed > 0:
+            overall = "[yellow]Partial[/yellow]"
+        else:
+            overall = "[dim]Not started[/dim]"
+        table.add_section()
+        table.add_row("", "Overall", overall, f"{all_passed}/{all_total}", style="bold")
 
         console.print(table)
 
